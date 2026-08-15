@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Calendar, Clock, Tag, X, Loader2, ImageIcon, ExternalLink,
   LayoutGrid, Newspaper, Cpu, Wrench, Lightbulb, BookOpen, Globe, Rocket, Sparkles,
@@ -21,6 +21,8 @@ import {
   type BloggerPost,
   type BlogCategory,
   BLOG_CATEGORIES,
+  BLOG_LABELS,
+  labelToKey,
   getPostExcerpt,
   formatDate,
   getCategoryByKey,
@@ -30,15 +32,15 @@ import { cn } from '@/lib/utils';
 // ─── Icon renderer ─────────────────────────────────────────────────
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutGrid,
-  Newspaper,
-  Cpu,
-  Wrench,
-  Lightbulb,
-  BookOpen,
-  Globe,
-  Rocket,
-  Sparkles,
+  'layout-grid': LayoutGrid,
+  newspaper: Newspaper,
+  cpu: Cpu,
+  wrench: Wrench,
+  lightbulb: Lightbulb,
+  'book-open': BookOpen,
+  globe: Globe,
+  rocket: Rocket,
+  sparkles: Sparkles,
 };
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
@@ -50,6 +52,8 @@ function CategoryIcon({ name, className }: { name: string; className?: string })
 
 interface BlogContentProps {
   posts: BloggerPost[];
+  activeTag?: string;
+  hasAnyPosts: boolean;
 }
 
 // ─── Post Card Skeleton ────────────────────────────────────────────
@@ -149,41 +153,26 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
 function CategoryTab({
   cat,
   isActive,
-  count,
-  onClick,
+  href,
 }: {
   cat: BlogCategory;
   isActive: boolean;
-  count: number;
-  onClick: () => void;
+  href: string;
 }) {
-  if (cat.key === 'all' && count === 0) return null;
-
   return (
-    <button
-      onClick={onClick}
+    <Link
+      href={href}
+      aria-current={isActive ? 'page' : undefined}
       className={cn(
         'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap shrink-0',
         isActive
           ? 'bg-primary text-primary-foreground shadow-sm'
-          : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+          : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
       )}
     >
       <CategoryIcon name={cat.icon} className="h-3.5 w-3.5" />
       <span>{cat.label}</span>
-      {cat.key !== 'all' && count > 0 && (
-        <span
-          className={cn(
-            'text-[10px] ml-0.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-semibold',
-            isActive
-              ? 'bg-primary-foreground/20 text-primary-foreground'
-              : 'bg-muted-foreground/10 text-muted-foreground'
-          )}
-        >
-          {count}
-        </span>
-      )}
-    </button>
+    </Link>
   );
 }
 
@@ -264,14 +253,14 @@ function PostReader({
               {post.labels && post.labels.length > 0 && (
                 <div className="flex gap-1.5 flex-wrap pb-3">
                   {post.labels.map((label) => (
-                    <Badge
+                    <Link
                       key={label}
-                      variant="outline"
-                      className="text-[11px] font-normal"
+                      href={`/blog?tag=${encodeURIComponent(label).replace(/%20/g, '+')}`}
+                      className="inline-flex items-center rounded-full border border-border px-2 py-1 text-[11px] font-normal text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
                     >
-                      <Tag className="h-3 w-3 mr-1" />
+                      <Tag className="mr-1 h-3 w-3" />
                       #{label}
-                    </Badge>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -319,37 +308,18 @@ function PostReader({
 
 // ─── Main BlogContent Component ────────────────────────────────────
 
-export function BlogContent({ posts }: BlogContentProps) {
-  const searchParams = useSearchParams();
-  const catParam = searchParams.get('cat');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const activeCategory = catParam || selectedCategory;
+export function BlogContent({ posts, activeTag, hasAnyPosts }: BlogContentProps) {
   const [selectedPost, setSelectedPost] = useState<BloggerPost | null>(null);
   const [readerOpen, setReaderOpen] = useState(false);
   const [fullPost, setFullPost] = useState<BloggerPost | null>(null);
-  const [loadingPost, setLoadingPost] = useState(false);
+  const activeCategory = activeTag ? getCategoryByKey(labelToKey(activeTag)) : getCategoryByKey('all');
 
-  // Count posts per category
-  const categoryCounts = BLOG_CATEGORIES.reduce<Record<string, number>>((acc, cat) => {
-    if (cat.key === 'all') {
-      acc['all'] = posts.length;
-    } else {
-      acc[cat.key] = posts.filter((p) => p.category === cat.key).length;
-    }
-    return acc;
-  }, {});
-
-  // Filter posts by active category
-  const filteredPosts =
-    activeCategory === 'all'
-      ? posts
-      : posts.filter((p) => p.category === activeCategory);
+  const filteredPosts = posts;
 
   // Open post reader
   const handleReadPost = useCallback(async (post: BloggerPost) => {
     setSelectedPost(post);
     setReaderOpen(true);
-    setLoadingPost(true);
     setFullPost(null);
 
     try {
@@ -363,17 +333,12 @@ export function BlogContent({ posts }: BlogContentProps) {
       }
     } catch {
       setFullPost(post);
-    } finally {
-      setLoadingPost(false);
     }
   }, []);
 
   const displayPost = fullPost || selectedPost;
 
-  // Filter out categories with 0 posts (except 'all')
-  const visibleCategories = BLOG_CATEGORIES.filter(
-    (cat) => cat.key === 'all' || (categoryCounts[cat.key] || 0) > 0,
-  );
+  const visibleCategories = BLOG_CATEGORIES;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
@@ -392,22 +357,21 @@ export function BlogContent({ posts }: BlogContentProps) {
           <CategoryTab
             key={cat.key}
             cat={cat}
-            isActive={activeCategory === cat.key}
-            count={categoryCounts[cat.key] || 0}
-            onClick={() => setSelectedCategory(cat.key)}
+            isActive={activeCategory.key === cat.key}
+            href={cat.key === 'all' ? '/blog' : `/blog?tag=${encodeURIComponent(cat.label).replace(/%20/g, '+')}`}
           />
         ))}
       </div>
 
       {/* Active category description */}
-      {activeCategory !== 'all' && (
+      {activeTag && (
         <p className="text-sm text-muted-foreground -mt-4">
-          {getCategoryByKey(activeCategory).description}
+          Showing posts tagged <span className="font-medium text-foreground">{activeTag}</span>. {activeCategory.description}
         </p>
       )}
 
       {/* Post grid */}
-      {posts.length === 0 ? (
+      {!hasAnyPosts ? (
         <Card>
           <CardContent className="py-20 text-center space-y-3">
             <p className="text-muted-foreground text-lg">No posts yet</p>
@@ -416,12 +380,12 @@ export function BlogContent({ posts }: BlogContentProps) {
             </p>
           </CardContent>
         </Card>
-      ) : filteredPosts.length === 0 ? (
+      ) : filteredPosts.length === 0 && activeTag ? (
         <Card>
           <CardContent className="py-16 text-center space-y-3">
-            <p className="text-muted-foreground text-lg">No posts in this category</p>
+            <p className="text-muted-foreground text-lg">No posts tagged &apos;{activeTag}&apos; yet</p>
             <p className="text-sm text-muted-foreground">
-              Try selecting a different category above.
+              Try <Link href="/blog" className="text-primary hover:underline">All posts</Link> or check back soon.
             </p>
           </CardContent>
         </Card>
@@ -446,17 +410,13 @@ export function BlogContent({ posts }: BlogContentProps) {
           </h3>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Every blog post is automatically categorized based on its labels (hashtags).
-            When publishing on Blogger, add labels like{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">News</code>,{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Tech</code>,{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">HowTo</code>,{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">DidYouKnow</code>,{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Tutorials</code>,{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">OpenSource</code>,{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">DevOps</code>, or{' '}
-            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">Updates</code>{' '}
-            to classify your posts under the right category.
+            When publishing on Blogger, use one of these exact labels so filters stay consistent:
           </p>
+          <div className="flex flex-wrap gap-2">
+            {BLOG_LABELS.map(({ label }) => (
+              <code key={label} className="rounded bg-muted px-2 py-1 text-xs font-mono">{label}</code>
+            ))}
+          </div>
         </div>
       )}
 

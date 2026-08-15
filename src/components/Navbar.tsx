@@ -30,7 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { BLOG_CATEGORIES } from '@/lib/blogger';
+import { BLOG_LABELS } from '@/lib/blogger';
 import { cn } from '@/lib/utils';
 
 interface NavLink {
@@ -40,25 +40,25 @@ interface NavLink {
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutGrid,
-  Newspaper,
-  Cpu,
-  Wrench,
-  Lightbulb,
-  BookOpen,
-  Globe,
-  Rocket,
-  Sparkles,
+  'layout-grid': LayoutGrid,
+  newspaper: Newspaper,
+  cpu: Cpu,
+  wrench: Wrench,
+  lightbulb: Lightbulb,
+  'book-open': BookOpen,
+  globe: Globe,
+  rocket: Rocket,
+  sparkles: Sparkles,
 };
 
 const navLinks: NavLink[] = [
   { href: '/', label: 'Tool' },
   { href: '/docs', label: 'Docs' },
   {
-    href: '/blog',
+      href: '/blog',
     label: 'Blog',
-    children: BLOG_CATEGORIES.filter((category) => category.key !== 'all').map((category) => ({
-      href: `/blog?cat=${category.key}`,
+    children: BLOG_LABELS.map((category) => ({
+      href: `/blog?${new URLSearchParams({ tag: category.label }).toString()}`,
       label: category.label,
       icon: ICON_MAP[category.icon] || Newspaper,
     })),

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { BlogContent } from '@/components/BlogContent';
-import { fetchBlogPosts } from '@/lib/blogger';
+import { fetchBlogPosts, getLabelByValue } from '@/lib/blogger';
 import { Card, CardContent } from '@/components/ui/card';
 
 export const metadata: Metadata = {
@@ -10,10 +10,21 @@ export const metadata: Metadata = {
     'Updates, guides, and insights about DropToGit, web development, and open source.',
 };
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
-export default async function BlogPage() {
-  const { posts } = await fetchBlogPosts(50);
+interface BlogPageProps {
+  searchParams: Promise<{ tag?: string | string[] }>;
+}
+
+export default async function BlogPage({ searchParams }: BlogPageProps) {
+  const params = await searchParams;
+  const rawTag = Array.isArray(params.tag) ? params.tag[0] : params.tag;
+  const activeTag = getLabelByValue(rawTag)?.label;
+
+  const [{ posts }, overall] = await Promise.all([
+    fetchBlogPosts(50, undefined, activeTag),
+    activeTag ? fetchBlogPosts(1) : Promise.resolve({ posts: [] }),
+  ]);
 
   return (
     <Suspense
@@ -36,7 +47,11 @@ export default async function BlogPage() {
         </div>
       }
     >
-      <BlogContent posts={posts} />
+      <BlogContent
+        posts={posts}
+        activeTag={activeTag}
+        hasAnyPosts={activeTag ? overall.posts.length > 0 : posts.length > 0}
+      />
     </Suspense>
   );
 }

@@ -1,54 +1,83 @@
-// ─── Blog Categories ────────────────────────────────────────────────
-//
-// Blogger labels map to categories.
-// When composing a post in Blogger, add labels (which act as hashtags).
-// Examples:  News, Tech, HowTo, DidYouKnow, Tutorials, OpenSource, DevOps, Updates
-//
+// Blogger labels are the blog's fixed category taxonomy.
+// These strings must match the labels typed in Blogger exactly.
+export const BLOG_LABELS = [
+  { label: 'News', icon: 'newspaper' },
+  { label: 'Tech', icon: 'cpu' },
+  { label: 'How To', icon: 'wrench' },
+  { label: 'Did You Know?', icon: 'lightbulb' },
+  { label: 'Tutorials', icon: 'book-open' },
+  { label: 'Open Source', icon: 'globe' },
+  { label: 'DevOps', icon: 'rocket' },
+  { label: 'Updates', icon: 'sparkles' },
+] as const;
+
+export type BlogLabel = (typeof BLOG_LABELS)[number];
+
+const BLOG_LABEL_DESCRIPTIONS: Record<string, string> = {
+  News: 'Announcements and breaking updates',
+  Tech: 'Technology deep-dives and analysis',
+  'How To': 'Step-by-step guides and practical help',
+  'Did You Know?': 'Interesting facts and useful tips',
+  Tutorials: 'In-depth walkthroughs',
+  'Open Source': 'Open source projects and contributions',
+  DevOps: 'Deployment, CI/CD, and infrastructure',
+  Updates: 'Product updates and changelogs',
+};
 
 export interface BlogCategory {
   key: string;
   label: string;
-  hashtag: string;          // The label/tag to match in Blogger
-  icon: string;             // Lucide icon name
+  hashtag: string;
+  icon: string;
   description: string;
 }
 
 export const BLOG_CATEGORIES: BlogCategory[] = [
-  { key: 'all',         label: 'All Posts',    hashtag: '',           icon: 'LayoutGrid',     description: 'Everything from the DropToGit blog' },
-  { key: 'news',        label: 'News',         hashtag: 'News',      icon: 'Newspaper',      description: 'Announcements and breaking updates' },
-  { key: 'tech',        label: 'Tech',         hashtag: 'Tech',      icon: 'Cpu',            description: 'Technology deep-dives and analysis' },
-  { key: 'howto',       label: 'How To',       hashtag: 'HowTo',     icon: 'Wrench',         description: 'Step-by-step guides and tutorials' },
-  { key: 'didyouknow',  label: 'Did You Know?', hashtag: 'DidYouKnow', icon: 'Lightbulb',      description: 'Interesting facts and tips' },
-  { key: 'tutorials',   label: 'Tutorials',    hashtag: 'Tutorials',  icon: 'BookOpen',       description: 'In-depth walkthroughs' },
-  { key: 'opensource',  label: 'Open Source',  hashtag: 'OpenSource', icon: 'Globe',          description: 'Open source projects and contributions' },
-  { key: 'devops',      label: 'DevOps',       hashtag: 'DevOps',    icon: 'Rocket',         description: 'Deployment, CI/CD, and infrastructure' },
-  { key: 'updates',     label: 'Updates',      hashtag: 'Updates',   icon: 'Sparkles',       description: 'Product updates and changelogs' },
+  {
+    key: 'all',
+    label: 'All posts',
+    hashtag: '',
+    icon: 'layout-grid',
+    description: 'Everything from the DropToGit blog',
+  },
+  ...BLOG_LABELS.map(({ label, icon }) => ({
+    key: labelToKey(label),
+    label,
+    hashtag: label,
+    icon,
+    description: BLOG_LABEL_DESCRIPTIONS[label],
+  })),
 ];
 
-/**
- * Given a post's labels array, return the first matching category key.
- * Falls back to 'news' if nothing matches.
- */
-export function categorizePost(labels?: string[]): string {
-  if (!labels || labels.length === 0) return 'news';
-  const normalized = labels.map(l => l.toLowerCase().replace(/[^a-z0-9]/g, ''));
-  for (const cat of BLOG_CATEGORIES) {
-    if (cat.key === 'all') continue;
-    if (normalized.includes(cat.hashtag.toLowerCase().replace(/[^a-z0-9]/g, ''))) {
-      return cat.key;
-    }
-  }
-  return 'news';
+const UNCATEGORIZED_CATEGORY: BlogCategory = {
+  key: 'uncategorized',
+  label: 'Uncategorized',
+  hashtag: '',
+  icon: 'tag',
+  description: 'Posts without one of the published blog labels',
+};
+
+export function labelToKey(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-/**
- * Get a BlogCategory object by key.
- */
+export function getLabelByValue(label: string | null | undefined): BlogLabel | undefined {
+  return BLOG_LABELS.find((entry) => entry.label === label);
+}
+
 export function getCategoryByKey(key: string): BlogCategory {
-  return BLOG_CATEGORIES.find(c => c.key === key) || BLOG_CATEGORIES[1]; // fallback to News
+  return BLOG_CATEGORIES.find((category) => category.key === key) || UNCATEGORIZED_CATEGORY;
 }
 
-// ─── Blogger Types ───────────────────────────────────────────────────
+export function getCategoryByLabel(label: string | null | undefined): BlogCategory | undefined {
+  const match = getLabelByValue(label);
+  return match ? getCategoryByKey(labelToKey(match.label)) : undefined;
+}
+
+export function categorizePost(labels?: string[]): string {
+  const matchedLabel = labels?.find((label) => Boolean(getLabelByValue(label)));
+  return matchedLabel ? labelToKey(matchedLabel) : UNCATEGORIZED_CATEGORY.key;
+}
 
 export interface BloggerPost {
   id: string;
@@ -58,148 +87,132 @@ export interface BloggerPost {
   published: string;
   updated: string;
   url: string;
-  author: {
+  author?: {
     displayName: string;
     url?: string;
     image?: { url: string };
   };
   labels?: string[];
   replies?: { totalItems: string };
-  /** Extracted from content — first `<img>` src */
   featuredImage?: string;
-  /** Category key computed from labels */
   category: string;
 }
 
+type BloggerApiPost = Omit<BloggerPost, 'slug' | 'featuredImage' | 'category'>;
+
 export interface BloggerListResponse {
-  items: BloggerPost[];
+  items?: BloggerApiPost[];
   nextPageToken?: string;
+  totalItems?: number;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────
+const BLOG_REVALIDATE_SECONDS = 3600;
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim();
 }
 
-function extractSlug(url: string): string {
+export function extractSlug(url: string): string {
   const match = url.match(/\/([\w-]+)(?:\.html)?$/);
   return match ? match[1] : '';
 }
 
-/**
- * Extract the first `<img src="...">` from HTML content.
- * Returns undefined if no image found.
- */
 export function extractFeaturedImage(content: string): string | undefined {
-  // Try to match <img> tags, handling both src="..." and src='...'
   const match = content.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
-  if (match?.[1]) {
-    // Blogger sometimes serves resized images via s1600, s320 etc.
-    // Normalize to a larger size for featured display
-    let url = match[1];
-    url = url.replace(/\/s[0-9]+(-[a-z])?\//i, '/s1600/');
-    return url;
-  }
-  return undefined;
+  if (!match?.[1]) return undefined;
+  return match[1].replace(/\/s[0-9]+(-[a-z])?\//i, '/s1600/');
 }
 
-// ─── API Functions ───────────────────────────────────────────────────
+function normalizePost(item: BloggerApiPost): BloggerPost {
+  return {
+    ...item,
+    slug: extractSlug(item.url) || item.id,
+    featuredImage: extractFeaturedImage(item.content),
+    category: categorizePost(item.labels),
+  };
+}
 
-/**
- * Fetch blog posts from Blogger API.
- * If BLOGGER_API_KEY or BLOGGER_BLOG_ID are not set, returns empty array.
- */
+function getBloggerConfig() {
+  return {
+    apiKey: process.env.BLOGGER_API_KEY,
+    blogId: process.env.BLOGGER_BLOG_ID,
+  };
+}
+
 export async function fetchBlogPosts(
   maxResults = 50,
   pageToken?: string,
-): Promise<{ posts: BloggerPost[]; nextPageToken?: string }> {
-  const apiKey = process.env.BLOGGER_API_KEY;
-  const blogId = process.env.BLOGGER_BLOG_ID;
-
-  if (!apiKey || !blogId) {
-    return { posts: [] };
-  }
+  tag?: string,
+): Promise<{ posts: BloggerPost[]; nextPageToken?: string; totalItems?: number }> {
+  const { apiKey, blogId } = getBloggerConfig();
+  if (!apiKey || !blogId) return { posts: [] };
 
   const params = new URLSearchParams({
     key: apiKey,
     maxResults: String(maxResults),
-    fields: 'items(id,title,content,published,updated,url,author,labels,replies/totalItems),nextPageToken',
+    fields: 'items(id,title,content,published,updated,url,author,labels,replies/totalItems),nextPageToken,totalItems',
   });
   if (pageToken) params.set('pageToken', pageToken);
+  if (tag && getLabelByValue(tag)) params.set('labels', tag);
 
   const res = await fetch(
-    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params}`,
-    { next: { revalidate: 300 } },
+    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
+    { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
   );
 
   if (!res.ok) return { posts: [] };
 
   const data: BloggerListResponse = await res.json();
-
-  const posts: BloggerPost[] = (data.items || []).map((item) => ({
-    ...item,
-    slug: extractSlug(item.url),
-    featuredImage: extractFeaturedImage(item.content),
-    category: categorizePost(item.labels),
-  }));
-
-  return { posts, nextPageToken: data.nextPageToken };
+  return {
+    posts: (data.items || []).map(normalizePost),
+    nextPageToken: data.nextPageToken,
+    totalItems: data.totalItems,
+  };
 }
 
-/**
- * Fetch a single blog post by slug (for SEO direct links).
- * Falls back to full-list scan since Blogger API doesn't support slug lookup.
- */
 export async function fetchBlogPost(slug: string): Promise<BloggerPost | null> {
-  const apiKey = process.env.BLOGGER_API_KEY;
-  const blogId = process.env.BLOGGER_BLOG_ID;
-
+  const { apiKey, blogId } = getBloggerConfig();
   if (!apiKey || !blogId) return null;
 
-  const res = await fetch(
-    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?key=${apiKey}&maxResults=500&fields=items(id,title,content,published,updated,url,author,labels,replies/totalItems)`,
-    { next: { revalidate: 300 } },
-  );
+  if (/^\d+$/.test(slug)) {
+    const postById = await fetchBlogPostById(slug);
+    if (postById) return postById;
+  }
 
+  const params = new URLSearchParams({
+    key: apiKey,
+    maxResults: '500',
+    fields: 'items(id,title,content,published,updated,url,author,labels,replies/totalItems)',
+  });
+  const res = await fetch(
+    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
+    { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
+  );
   if (!res.ok) return null;
 
   const data: BloggerListResponse = await res.json();
-  const post = (data.items || []).find((item) => extractSlug(item.url) === slug);
-
-  return post
-    ? { ...post, slug, featuredImage: extractFeaturedImage(post.content), category: categorizePost(post.labels) }
-    : null;
+  const item = (data.items || []).find(
+    (candidate) => extractSlug(candidate.url) === slug || candidate.id === slug,
+  );
+  return item ? normalizePost(item) : null;
 }
 
-/**
- * Fetch a single blog post by Blogger post ID (for the sidebar reader API).
- */
 export async function fetchBlogPostById(postId: string): Promise<BloggerPost | null> {
-  const apiKey = process.env.BLOGGER_API_KEY;
-  const blogId = process.env.BLOGGER_BLOG_ID;
-
+  const { apiKey, blogId } = getBloggerConfig();
   if (!apiKey || !blogId) return null;
 
   const params = new URLSearchParams({
     key: apiKey,
     fields: 'id,title,content,published,updated,url,author,labels,replies/totalItems',
   });
-
   const res = await fetch(
-    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${postId}?${params}`,
-    { next: { revalidate: 60 } },
+    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${encodeURIComponent(postId)}?${params.toString()}`,
+    { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
   );
-
   if (!res.ok) return null;
 
-  const item = await res.json();
-  return {
-    ...item,
-    slug: extractSlug(item.url),
-    featuredImage: extractFeaturedImage(item.content),
-    category: categorizePost(item.labels),
-  };
+  const item: BloggerApiPost = await res.json();
+  return normalizePost(item);
 }
 
 export function getPostExcerpt(content: string, maxLength = 200): string {

@@ -9,10 +9,18 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { fetchBlogPost, formatDate, getCategoryByKey, type BlogCategory } from '@/lib/blogger';
+import { fetchBlogPost, formatDate, getCategoryByKey } from '@/lib/blogger';
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutGrid, Newspaper, Cpu, Wrench, Lightbulb, BookOpen, Globe, Rocket, Sparkles,
+  'layout-grid': LayoutGrid,
+  newspaper: Newspaper,
+  cpu: Cpu,
+  wrench: Wrench,
+  lightbulb: Lightbulb,
+  'book-open': BookOpen,
+  globe: Globe,
+  rocket: Rocket,
+  sparkles: Sparkles,
 };
 
 interface Props {
@@ -32,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
@@ -70,7 +78,7 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* Header */}
         <header className="space-y-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="text-xs">
               {(() => {
                 const Icon = ICON_MAP[cat.icon] || Newspaper;
@@ -78,13 +86,15 @@ export default async function BlogPostPage({ params }: Props) {
               })()}
               {cat.label}
             </Badge>
-            {post.labels &&
-              post.labels.length > 0 &&
-              post.labels.map((label) => (
-                <Badge key={label} variant="outline" className="text-[11px] font-normal">
-                  #{label}
-                </Badge>
-              ))}
+            {post.labels?.map((label) => (
+              <Link
+                key={label}
+                href={`/blog?tag=${encodeURIComponent(label).replace(/%20/g, '+')}`}
+                className="inline-flex items-center rounded-full border border-border px-2 py-1 text-[11px] font-normal text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                #{label}
+              </Link>
+            ))}
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight">
             {post.title}
