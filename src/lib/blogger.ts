@@ -112,10 +112,30 @@ export interface BloggerPost {
 
 type BloggerApiPost = Omit<BloggerPost, 'slug' | 'featuredImage' | 'category' | 'categories'>;
 
-export interface BloggerListResponse {
+interface BloggerListResponse {
   items?: BloggerApiPost[];
   nextPageToken?: string;
   totalItems?: number;
+}
+
+interface BloggerFeedEntry {
+  id?: { $t?: string };
+  title?: { $t?: string };
+  content?: { $t?: string };
+  summary?: { $t?: string };
+  published?: { $t?: string };
+  updated?: { $t?: string };
+  category?: { term?: string }[];
+  author?: { name?: { $t?: string }; uri?: { $t?: string }; 'gd$image'?: { src?: string } }[];
+  link?: { rel?: string; href?: string }[];
+  'thr$total'?: { $t?: string };
+}
+
+interface BloggerFeedResponse {
+  feed?: {
+    entry?: BloggerFeedEntry[];
+    'openSearch$totalResults'?: { $t?: string };
+  };
 }
 
 export type BlogFetchError = 'missing-config' | 'api-error';
@@ -162,13 +182,67 @@ function getBloggerConfig() {
   };
 }
 
+function getFeedLink(entry: BloggerFeedEntry, rel: string): string | undefined {
+  return entry.link?.find((link) => link.rel === rel)?.href;
+}
+
+function extractFeedPostId(entry: BloggerFeedEntry): string {
+  const id = entry.id?.$t || '';
+  return id.match(/post-(\d+)$/)?.[1] || id;
+}
+
+function normalizeFeedEntry(entry: BloggerFeedEntry, blogId: string): BloggerPost {
+  const labels = (entry.category || [])
+    .map((category) => category.term?.trim())
+    .filter((label): label is string => Boolean(label));
+  const url = getFeedLink(entry, 'alternate') || `https://www.blogger.com/feeds/${blogId}/posts/default/${extractFeedPostId(entry)}`;
+  const item: BloggerApiPost = {
+    id: extractFeedPostId(entry),
+    title: entry.title?.$t || 'Untitled post',
+    content: entry.content?.$t || entry.summary?.$t || '',
+    published: entry.published?.$t || '',
+    updated: entry.updated?.$t || entry.published?.$t || '',
+    url,
+    author: entry.author?.[0]
+      ? {
+          displayName: entry.author[0].name?.$t || 'Unknown author',
+          url: entry.author[0].uri?.$t,
+          image: entry.author[0]['gd$image']?.src ? { url: entry.author[0]['gd$image'].src } : undefined,
+        }
+      : undefined,
+    labels,
+    replies: entry['thr$total']?.$t ? { totalItems: entry['thr$total'].$t } : undefined,
+  };
+  return normalizePost(item);
+}
+
+async function fetchPublicBloggerFeed(maxResults: number, tag: string | undefined, blogId: string): Promise<BlogListResult> {
+  const labelPath = tag?.trim() ? `/-/${encodeURIComponent(tag.trim())}` : '';
+  const url = `https://www.blogger.com/feeds/${blogId}/posts/default${labelPath}?alt=json&max-results=${maxResults}`;
+
+  try {
+    const res = await fetch(url, { next: { revalidate: BLOG_REVALIDATE_SECONDS } });
+    if (!res.ok) return { posts: [], error: 'api-error' };
+    const data: BloggerFeedResponse = await res.json();
+    const entries = data.feed?.entry || [];
+    return {
+      posts: entries.map((entry) => normalizeFeedEntry(entry, blogId)),
+      totalItems: Number(data.feed?.['openSearch$totalResults']?.$t || entries.length),
+    };
+  } catch {
+    return { posts: [], error: 'api-error' };
+  }
+}
+
 export async function fetchBlogPosts(
   maxResults = 50,
   pageToken?: string,
   tag?: string,
 ): Promise<BlogListResult> {
   const { apiKey, blogId } = getBloggerConfig();
-  if (!apiKey || !blogId) return { posts: [], error: 'missing-config' };
+  if (!blogId) return { posts: [], error: 'missing-config' };
+
+  if (!apiKey) return fetchPublicBloggerFeed(maxResults, tag, blogId);
 
   const params = new URLSearchParams({
     key: apiKey,
@@ -178,19 +252,25 @@ export async function fetchBlogPosts(
   if (pageToken) params.set('pageToken', pageToken);
   if (tag?.trim()) params.set('labels', tag.trim());
 
-  const res = await fetch(
-    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
-    { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
-  );
+  try {
+    const res = await fetch(
+      `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
+      { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
+    );
 
-  if (!res.ok) return { posts: [], error: 'api-error' };
+    if (res.ok) {
+      const data: BloggerListResponse = await res.json();
+      return {
+        posts: (data.items || []).map(normalizePost),
+        nextPageToken: data.nextPageToken,
+        totalItems: data.totalItems,
+      };
+    }
+  } catch {
+    // Fall through to the public Blogger feed.
+  }
 
-  const data: BloggerListResponse = await res.json();
-  return {
-    posts: (data.items || []).map(normalizePost),
-    nextPageToken: data.nextPageToken,
-    totalItems: data.totalItems,
-  };
+  return fetchPublicBloggerFeed(maxResults, tag, blogId);
 }
 
 export async function fetchAllBlogPosts(maxPages = 10): Promise<BloggerPost[]> {
@@ -209,47 +289,65 @@ export async function fetchAllBlogPosts(maxPages = 10): Promise<BloggerPost[]> {
 
 export async function fetchBlogPost(slug: string): Promise<BloggerPost | null> {
   const { apiKey, blogId } = getBloggerConfig();
-  if (!apiKey || !blogId) return null;
+  if (!blogId) return null;
 
-  if (/^\d+$/.test(slug)) {
+  if (apiKey && /^\d+$/.test(slug)) {
     const postById = await fetchBlogPostById(slug);
     if (postById) return postById;
   }
 
-  const params = new URLSearchParams({
-    key: apiKey,
-    maxResults: '500',
-    fields: 'items(id,title,content,published,updated,url,author,labels,replies/totalItems)',
-  });
-  const res = await fetch(
-    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
-    { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
-  );
-  if (!res.ok) return null;
+  if (apiKey) {
+    try {
+      const params = new URLSearchParams({
+        key: apiKey,
+        maxResults: '500',
+        fields: 'items(id,title,content,published,updated,url,author,labels,replies/totalItems)',
+      });
+      const res = await fetch(
+        `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
+        { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
+      );
+      if (res.ok) {
+        const data: BloggerListResponse = await res.json();
+        const item = (data.items || []).find(
+          (candidate) => extractSlug(candidate.url) === slug || candidate.id === slug,
+        );
+        if (item) return normalizePost(item);
+      }
+    } catch {
+      // Fall through to the public feed.
+    }
+  }
 
-  const data: BloggerListResponse = await res.json();
-  const item = (data.items || []).find(
-    (candidate) => extractSlug(candidate.url) === slug || candidate.id === slug,
-  );
-  return item ? normalizePost(item) : null;
+  const posts = await fetchAllBlogPosts();
+  return posts.find((post) => post.slug === slug || post.id === slug) || null;
 }
 
 export async function fetchBlogPostById(postId: string): Promise<BloggerPost | null> {
   const { apiKey, blogId } = getBloggerConfig();
-  if (!apiKey || !blogId) return null;
+  if (!blogId) return null;
 
-  const params = new URLSearchParams({
-    key: apiKey,
-    fields: 'id,title,content,published,updated,url,author,labels,replies/totalItems',
-  });
-  const res = await fetch(
-    `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${encodeURIComponent(postId)}?${params.toString()}`,
-    { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
-  );
-  if (!res.ok) return null;
+  if (apiKey) {
+    try {
+      const params = new URLSearchParams({
+        key: apiKey,
+        fields: 'id,title,content,published,updated,url,author,labels,replies/totalItems',
+      });
+      const res = await fetch(
+        `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts/${encodeURIComponent(postId)}?${params.toString()}`,
+        { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
+      );
+      if (res.ok) {
+        const item: BloggerApiPost = await res.json();
+        return normalizePost(item);
+      }
+    } catch {
+      // Fall through to the public feed.
+    }
+  }
 
-  const item: BloggerApiPost = await res.json();
-  return normalizePost(item);
+  const posts = await fetchAllBlogPosts();
+  return posts.find((post) => post.id === postId) || null;
 }
 
 export function getPostExcerpt(content: string, maxLength = 200): string {

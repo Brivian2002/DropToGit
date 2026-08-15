@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getCommitTreeSha,
+  createCommitOnBranchWithDeletions,
   getDefaultBranch,
   getRefSha,
   getTreeRecursive,
-  createCommit,
-  createTree,
-  updateRef,
+  getCommitTreeSha,
 } from '@/lib/github';
 
 export async function POST(request: NextRequest) {
@@ -36,32 +34,31 @@ export async function POST(request: NextRequest) {
     const baseTreeSha = await getCommitTreeSha(token, owner, repo, parentSha);
     const existingFiles = await getTreeRecursive(token, owner, repo, baseTreeSha);
 
-    // Explicit null SHA entries remove every tracked blob from the new tree.
-    const deleteEntries = existingFiles.map((entry) => ({
-      path: entry.path,
-      mode: entry.mode || '100644',
-      type: 'blob' as const,
-      sha: null,
-    }));
-    const emptyTree = deleteEntries.length > 0
-      ? await createTree(token, owner, repo, baseTreeSha, deleteEntries)
-      : { sha: '4b825dc642cb6eb9a060e54bf899d15006895fb' };
+    if (existingFiles.length === 0) {
+      return NextResponse.json({
+        success: true,
+        branch,
+        commitSha: parentSha,
+        filesDeleted: 0,
+        message: `Repository ${owner}/${repo} is already empty`,
+      });
+    }
 
-    const commit = await createCommit(
+    const deletionCommit = await createCommitOnBranchWithDeletions(
       token,
       owner,
       repo,
+      branch,
+      parentSha,
       'Delete all files',
-      emptyTree.sha,
-      [parentSha],
+      existingFiles.map((entry) => entry.path),
     );
-
-    await updateRef(token, owner, repo, branch, commit.sha);
 
     return NextResponse.json({
       success: true,
       branch,
-      commitSha: commit.sha,
+      commitSha: deletionCommit.sha,
+      commitUrl: deletionCommit.url,
       filesDeleted: existingFiles.length,
       message: `All files deleted from ${owner}/${repo}`,
     });

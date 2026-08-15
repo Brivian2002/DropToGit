@@ -233,6 +233,52 @@ export async function createCommit(
   });
 }
 
+export async function createCommitOnBranchWithDeletions(
+  token: string,
+  owner: string,
+  repo: string,
+  branch: string,
+  expectedHeadOid: string,
+  message: string,
+  paths: string[],
+): Promise<{ sha: string; url: string }> {
+  const query = `mutation($input: CreateCommitOnBranchInput!) {
+    createCommitOnBranch(input: $input) {
+      commit { oid url }
+    }
+  }`;
+  const variables = {
+    input: {
+      branch: { repositoryNameWithOwner: `${owner}/${repo}`, branchName: branch },
+      message: { headline: message },
+      expectedHeadOid,
+      fileChanges: { deletions: paths.map((path) => ({ path })) },
+    },
+  };
+
+  const response = await fetch('https://api.github.com/graphql', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'DropToGit',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.errors?.length) {
+    const messageText = data.errors?.[0]?.message || `GitHub GraphQL error (${response.status})`;
+    throw new Error(String(messageText).replace(/token[\s:=].*/gi, '[REDACTED]'));
+  }
+
+  const commit = data.data?.createCommitOnBranch?.commit;
+  if (!commit?.oid || !commit?.url) throw new Error('GitHub did not return the deletion commit');
+  return { sha: commit.oid, url: commit.url };
+}
+
 export async function updateRef(
   token: string,
   owner: string,
