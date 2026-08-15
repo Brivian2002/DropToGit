@@ -3,17 +3,14 @@ import {
   getRefSha,
   getCommitTreeSha,
   getTreeRecursive,
-  getFileContent,
   createBlob,
   createTree,
   createCommit,
   updateRef,
   getDefaultBranch,
   sanitizePath,
-  getOwnerFromToken,
   type GitHubTreeEntry,
 } from '@/lib/github';
-import { uint8ArrayToBase64 } from '@/lib/zip';
 
 export const maxDuration = 300;
 
@@ -87,7 +84,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const fileEntries: FileEntry[] = files;
+  const fileEntries: FileEntry[] = [...files].sort((a: FileEntry, b: FileEntry) =>
+    a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }),
+  );
 
   // Validate mode
   if (mode !== 'replace' && mode !== 'smart') {
@@ -227,7 +226,8 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 6. Create tree
+        // 6. Create tree in deterministic path order.
+        treeItems.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
         await notifyProgress(controller, 'Creating Git objects', 0, 1, 'Creating tree object...');
 
         // GitHub API has a limit of 100K entries per tree, but we'll batch if needed

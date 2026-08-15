@@ -17,15 +17,29 @@ const MAX_TOTAL_SIZE = 200 * 1024 * 1024; // 200MB total
 const MAX_FILES = 10000;
 
 function sanitizeFilePath(path: string): string {
-  // Normalize path separators
-  let clean = path.replace(/\\/g, '/');
-  // Remove leading slashes
-  clean = clean.replace(/^\/+/g, '');
-  // Block path traversal (security — only this is enforced)
+  const clean = path.replace(/\\/g, '/').replace(/^\/+/g, '');
   if (clean.includes('..') || clean.includes('\0')) {
     throw new Error(`Path traversal detected: ${path}`);
   }
   return clean;
+}
+
+export function sortProjectFiles(files: ProjectFile[]): ProjectFile[] {
+  return [...files].sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+export function stripCommonRoot(files: ProjectFile[]): ProjectFile[] {
+  if (files.length === 0) return files;
+  const firstSegments = files.map((file) => file.path.split('/')[0]);
+  const root = firstSegments[0];
+  if (!root || !firstSegments.every((segment) => segment === root) || !files.every((file) => file.path.includes('/'))) {
+    return sortProjectFiles(files);
+  }
+
+  return sortProjectFiles(files.map((file) => ({
+    ...file,
+    path: file.path.slice(root.length + 1),
+  })));
 }
 
 export async function parseZipFile(file: File | Blob): Promise<ZipResult> {
@@ -68,7 +82,7 @@ export async function parseZipFile(file: File | Blob): Promise<ZipResult> {
     files.push({ path: sanitized, content, size });
   }
 
-  return { files, totalSize, errors };
+  return { files: stripCommonRoot(files), totalSize, errors };
 }
 
 export function parseFileList(fileList: FileList | File[]): ZipResult {
@@ -113,7 +127,7 @@ export function parseFileList(fileList: FileList | File[]): ZipResult {
     files.push({ path: sanitized, content: new Uint8Array(0), size, _file: file } as ProjectFile & { _file: File });
   }
 
-  return { files, totalSize, errors };
+  return { files: sortProjectFiles(files), totalSize, errors };
 }
 
 // Async version for folder uploads - reads file content
@@ -155,7 +169,7 @@ export async function readFolderFiles(fileList: FileList | File[]): Promise<ZipR
     files.push({ path: sanitized, content: new Uint8Array(buffer), size });
   }
 
-  return { files, totalSize, errors };
+  return { files: stripCommonRoot(files), totalSize, errors };
 }
 
 export function uint8ArrayToBase64(data: Uint8Array): string {

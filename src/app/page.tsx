@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -27,7 +27,6 @@ import { toast } from 'sonner';
 import type { GitHubRepo } from '@/lib/github';
 import { uint8ArrayToBase64 } from '@/lib/zip';
 import { useAppStore, type PushMode } from '@/store';
-import { AnalysisSection } from '@/components/AnalysisSection';
 import { CreateRepoDialog } from '@/components/CreateRepoDialog';
 import { Dropzone } from '@/components/Dropzone';
 import FilePreview from '@/components/FilePreview';
@@ -118,7 +117,7 @@ export default function Home() {
   const canShowRepos = store.token.length > 0;
   const canShowUpload = store.selectedRepo !== null;
   const canShowConfigure = store.files.length > 0;
-  const selectedFilesForPush = useMemo(() => store.files.filter((file) => store.selectedFilePaths.has(file.path)), [store.files, store.selectedFilePaths]);
+  const selectedFilesForPush = store.files;
 
   useEffect(() => {
     if (store.files.length > 0 && !store.commitMessage) {
@@ -330,21 +329,17 @@ export default function Home() {
               )}
 
               {canShowConfigure && store.stage !== 'success' && (
-                <motion.section {...fadeUp} layout><AnalysisSection /></motion.section>
-              )}
-
-              {canShowConfigure && store.stage !== 'success' && (
                 <motion.section {...fadeUp} layout>
                   <Card className="overflow-hidden border-border/80 bg-card/78">
                     <SectionHeader step="04" title="Review and push" description="Inspect the file tree, choose how the repository should be updated, then create your commit." icon={<Zap className="h-5 w-5" />} tone="violet" />
                     <CardContent className="space-y-6">
-                      <div><div className="mb-2 flex items-center justify-between gap-3"><Label>Files in this upload</Label><span className="text-xs text-muted-foreground">Click a file to preview</span></div><FileTreePreview files={store.files} selectable selectedPaths={store.selectedFilePaths} onToggleFile={store.toggleFilePath} onFileClick={store.setPreviewFile} /></div>
+                      <div><div className="mb-2 flex items-center justify-between gap-3"><Label>Files in this upload</Label><span className="text-xs text-muted-foreground">All uploaded files are approved · click a file to preview</span></div><FileTreePreview files={store.files} onFileClick={store.setPreviewFile} /></div>
                       <Separator />
                       <div className="space-y-2"><Label>Branch</Label><div className="flex flex-col gap-2 sm:flex-row"><select aria-label="Select branch" value={store.branch} onChange={(event) => store.setBranch(event.target.value)} className="h-10 flex-1 rounded-lg border border-input bg-background/55 px-3 font-mono text-sm outline-none focus:ring-2 focus:ring-ring">{store.branches.length === 0 && <option value="">{loadingBranches ? 'Loading branches…' : 'Default branch'}</option>}{store.branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}</select><div className="relative flex-1"><Input placeholder="new-branch-name" value={newBranch} onChange={(event) => setNewBranch(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && handleCreateBranch()} className="h-10 rounded-lg bg-background/55 pr-10 font-mono text-sm" /><button type="button" onClick={handleCreateBranch} disabled={!newBranch.trim()} aria-label="Create new branch" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:text-primary disabled:opacity-40"><Plus className="h-4 w-4" /></button></div></div></div>
                       <div className="space-y-3"><Label>Push mode</Label><RadioGroup value={store.mode} onValueChange={(value) => store.setMode(value as PushMode)} className="grid gap-3 sm:grid-cols-2"><label htmlFor="mode-replace" className={cn('relative cursor-pointer rounded-xl border p-4 transition-all hover:bg-muted/30', store.mode === 'replace' ? 'border-primary/60 bg-primary/6' : 'border-border/80')}><div className="flex items-start gap-2.5"><RadioGroupItem value="replace" id="mode-replace" className="mt-0.5" /><div><p className="text-sm font-semibold">Replace everything</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Create a clean snapshot and remove repository files not in this upload.</p></div></div></label><label htmlFor="mode-smart" className={cn('relative cursor-pointer rounded-xl border p-4 transition-all hover:bg-muted/30', store.mode === 'smart' ? 'border-sky-accent/60 bg-sky-accent/6' : 'border-border/80')}><div className="flex items-start gap-2.5"><RadioGroupItem value="smart" id="mode-smart" className="mt-0.5" /><div><p className="text-sm font-semibold">Smart update</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Only add or update uploaded files while preserving everything else.</p></div></div></label></RadioGroup></div>
                       {store.mode === 'replace' && <div className="flex items-start gap-2.5 rounded-xl border border-amber-400/20 bg-amber-400/8 p-3.5 text-xs leading-5 text-amber-200"><Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 fill-current" /><p><strong>Replace mode is destructive.</strong> Files already in the repository that are not included in this upload will be removed.</p></div>}
                       <div className="grid gap-5 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="destination">Destination subfolder <span className="font-normal text-muted-foreground">(optional)</span></Label><Input id="destination" placeholder="e.g. apps/web" value={store.destination} onChange={(event) => store.setDestination(event.target.value)} className="h-10 rounded-lg bg-background/55 font-mono text-sm" /></div><div className="space-y-2"><div className="flex items-center justify-between"><Label htmlFor="commit-msg">Commit message</Label><Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" onClick={() => { store.setCommitMessage(`Upload project — ${new Date().toISOString().split('T')[0]}`); toast.success('Commit message suggested'); }}><Wand2 className="h-3 w-3" />Suggest</Button></div><Textarea id="commit-msg" placeholder="Describe your changes…" value={store.commitMessage} onChange={(event) => store.setCommitMessage(event.target.value)} className="min-h-[82px] resize-y rounded-lg bg-background/55 text-sm" /></div></div>
-                      <div className="flex flex-wrap gap-2"><Badge variant="secondary" className="rounded-full text-xs">{selectedFilesForPush.length}/{store.files.length} files selected</Badge><Badge variant="secondary" className="rounded-full text-xs">{store.mode === 'replace' ? 'Replace' : 'Smart update'}</Badge>{store.branch && <Badge variant="secondary" className="gap-1 rounded-full font-mono text-xs"><GitBranch className="h-3 w-3" />{store.branch}</Badge>}{store.destination && <Badge variant="secondary" className="rounded-full font-mono text-xs">→ {store.destination}</Badge>}</div>
+                      <div className="flex flex-wrap gap-2"><Badge variant="secondary" className="rounded-full text-xs">{store.files.length} files approved</Badge><Badge variant="secondary" className="rounded-full text-xs">{store.mode === 'replace' ? 'Replace' : 'Smart update'}</Badge>{store.branch && <Badge variant="secondary" className="gap-1 rounded-full font-mono text-xs"><GitBranch className="h-3 w-3" />{store.branch}</Badge>}{store.destination && <Badge variant="secondary" className="rounded-full font-mono text-xs">→ {store.destination}</Badge>}</div>
                       <Button size="lg" className="h-12 w-full rounded-xl text-base font-semibold shadow-lg shadow-primary/15" onClick={handlePush} disabled={!store.selectedRepo || selectedFilesForPush.length === 0 || !store.commitMessage.trim() || store.stage === 'pushing'}><Upload className="mr-2 h-4.5 w-4.5" />Push {selectedFilesForPush.length} file{selectedFilesForPush.length === 1 ? '' : 's'} to GitHub<ArrowRight className="ml-2 h-4 w-4" /></Button>
                     </CardContent>
                   </Card>

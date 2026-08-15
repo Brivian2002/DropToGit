@@ -37,13 +37,6 @@ interface AppState {
   fileName: string;
   setFileName: (name: string) => void;
 
-  // Selective push — track which files are checked for push
-  selectedFilePaths: Set<string>;
-  setSelectedFilePaths: (paths: Set<string>) => void;
-  toggleFilePath: (path: string) => void;
-  selectAllFiles: () => void;
-  deselectAllFiles: () => void;
-
   // File preview
   previewFile: ProjectFile | null;
   setPreviewFile: (file: ProjectFile | null) => void;
@@ -103,25 +96,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       files,
       totalSize,
       uploadErrors: errors,
-      selectedFilePaths: new Set(files.map((f) => f.path)),
     }),
   totalSize: 0,
   uploadErrors: [],
   fileName: '',
   setFileName: (name) => set({ fileName: name }),
-
-  // Selective push
-  selectedFilePaths: new Set<string>(),
-  setSelectedFilePaths: (paths) => set({ selectedFilePaths: paths }),
-  toggleFilePath: (path) => {
-    const current = get().selectedFilePaths;
-    const next = new Set(current);
-    if (next.has(path)) next.delete(path);
-    else next.add(path);
-    set({ selectedFilePaths: next });
-  },
-  selectAllFiles: () => set({ selectedFilePaths: new Set(get().files.map((f) => f.path)) }),
-  deselectAllFiles: () => set({ selectedFilePaths: new Set() }),
 
   // File preview
   previewFile: null,
@@ -158,7 +137,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       totalSize: 0,
       uploadErrors: [],
       fileName: '',
-      selectedFilePaths: new Set(),
       previewFile: null,
       mode: 'replace',
       destination: '',
@@ -182,7 +160,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       totalSize: 0,
       uploadErrors: [],
       fileName: '',
-      selectedFilePaths: new Set(),
       previewFile: null,
       mode: 'replace',
       destination: '',

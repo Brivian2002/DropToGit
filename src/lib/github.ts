@@ -12,7 +12,7 @@ export interface GitHubTreeEntry {
   path: string;
   mode: string;
   type: 'blob' | 'tree';
-  sha?: string;
+  sha?: string | null;
   size?: number;
   content?: string;
 }
@@ -206,7 +206,7 @@ export async function createTree(
   owner: string,
   repo: string,
   baseTreeSha: string | null,
-  tree: { path: string; mode: string; type: 'blob' | 'tree'; sha?: string }[]
+  tree: { path: string; mode: string; type: 'blob' | 'tree'; sha?: string | null }[]
 ): Promise<{ sha: string; url: string; tree: object[] }> {
   const body: Record<string, unknown> = { tree };
   if (baseTreeSha) {
