@@ -1,44 +1,42 @@
-import { NextResponse } from "next/server";
-import { createRepo, listRepos, verifyToken, GitHubError } from "@/lib/github";
+import { NextRequest, NextResponse } from 'next/server';
+import { listRepos, createRepo, getOwnerFromToken, validateRepoName } from '@/lib/github';
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export async function GET(request: NextRequest) {
+  try {
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ error: 'GitHub token is required' }, { status: 401 });
+    }
 
-/** Minimal body validation — never log the token. */
-function getToken(body: unknown): string {
-  const t = (body as any)?.token;
-  if (typeof t !== "string" || !t.trim()) {
-    throw new GitHubError(400, "A GitHub token is required.");
+    const repos = await listRepos(token);
+    return NextResponse.json({ repos });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to fetch repositories';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-  return t.trim();
 }
 
-/** POST /api/repos — list the authenticated user's repositories. */
-export async function POST(req: Request) {
-  let body: any;
+export async function POST(request: NextRequest) {
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ error: 'GitHub token is required' }, { status: 401 });
+    }
 
-  let token: string;
-  try {
-    token = getToken(body);
-  } catch (e: any) {
-    return NextResponse.json({ error: e.safeDetail }, { status: e.status });
-  }
+    const body = await request.json();
+    const { name, description, isPrivate } = body;
 
-  try {
-    const [user, repos] = await Promise.all([
-      verifyToken(token),
-      listRepos(token),
-    ]);
-    return NextResponse.json({ login: user.login, repos });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e.safeDetail ?? "Failed to load repositories." },
-      { status: e.status ?? 500 },
-    );
+    if (!name) {
+      return NextResponse.json({ error: 'Repository name is required' }, { status: 400 });
+    }
+
+    const validatedName = validateRepoName(name);
+    const repo = await createRepo(token, validatedName, description || '', isPrivate || false);
+
+    return NextResponse.json({ repo });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create repository';
+    const status = message.includes('already exists') ? 409 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

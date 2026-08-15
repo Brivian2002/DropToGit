@@ -1,635 +1,634 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import { useRef, useState, useCallback } from 'react';
+import { RepoPicker } from '@/components/RepoPicker';
+import { CreateRepoDialog } from '@/components/CreateRepoDialog';
+import { Dropzone } from '@/components/Dropzone';
+import { FileTreePreview } from '@/components/FileTreePreview';
+import { ProgressBar, type ProgressStage } from '@/components/ProgressBar';
+import { WipeRepoButton } from '@/components/WipeRepoButton';
+import { SuccessScreen } from '@/components/SuccessScreen';
+import { AnalysisSection } from '@/components/AnalysisSection';
+import FilePreview from '@/components/FilePreview';
+import { useAppStore, type PushMode } from '@/store';
+import { uint8ArrayToBase64 } from '@/lib/zip';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Separator } from '@/components/ui/separator';
 import {
-  Github,
-  Rocket,
-  Trash2,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
   ArrowRight,
-  ShieldCheck,
-  Zap,
+  Upload,
   GitBranch,
-  RefreshCw,
-  ListTree,
-  PackageCheck,
-  RotateCcw,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Logo, LogoMark } from "@/components/droptogit/Logo";
-import { ThemeToggle } from "@/components/droptogit/ThemeToggle";
-import { CredentialsForm } from "@/components/droptogit/CredentialsForm";
-import { RepoPicker } from "@/components/droptogit/RepoPicker";
-import { Dropzone } from "@/components/droptogit/Dropzone";
-import { FileTreePreview } from "@/components/droptogit/FileTreePreview";
-import { UploadStats } from "@/components/droptogit/UploadStats";
-import { DestinationForm } from "@/components/droptogit/DestinationForm";
-import { ModeSelector } from "@/components/droptogit/ModeSelector";
-import { ProgressBar } from "@/components/droptogit/ProgressBar";
-import { WipeRepoButton } from "@/components/droptogit/WipeRepoButton";
-import { SuccessScreen } from "@/components/droptogit/SuccessScreen";
-import {
-  createBlobsChunked,
-  commitPush,
-  fetchRepos,
-  fetchExistingFiles,
-  wipeRepo,
-} from "@/lib/push-client";
-import { computeGitBlobShaAsync } from "@/lib/diff";
-import { applyDestination } from "@/lib/zip";
-import type { ProjectFile } from "@/lib/zip";
-import type { ProgressEvent, PushMode, PushResult, RepoInfo, StageId } from "@/lib/types";
+  Shield,
+  Zap,
+  Github,
+  Plus,
+  Wand2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import type { GitHubRepo } from '@/lib/github';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-interface PushState {
-  status: "idle" | "pushing" | "done" | "error";
-  stage: StageId;
-  detail?: string;
-  progress?: number;
-  error?: string | null;
-  result?: PushResult;
-}
+const fadeUp = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+  transition: { duration: 0.3, ease: 'easeOut' },
+};
 
-export default function DropToGitPage() {
-  const { toast } = useToast();
+// ─── Step Icon Wrapper ──────────────────────────────────────────
 
-  // Credentials
-  const [token, setToken] = React.useState("");
-  const [connectedLogin, setConnectedLogin] = React.useState<string | null>(null);
-  const [repos, setRepos] = React.useState<RepoInfo[]>([]);
-  const [reposLoading, setReposLoading] = React.useState(false);
-  const [credError, setCredError] = React.useState<string | null>(null);
-
-  // Selection + upload
-  const [selectedRepo, setSelectedRepo] = React.useState<RepoInfo | null>(null);
-  const [files, setFiles] = React.useState<ProjectFile[]>([]);
-
-  // Push config
-  const [mode, setMode] = React.useState<PushMode>("smart");
-  const [destination, setDestination] = React.useState("");
-  const [commitMessage, setCommitMessage] = React.useState("Update project via DropToGit");
-
-  // Diff preview (smart mode)
-  const [localShas, setLocalShas] = React.useState<Map<string, string> | null>(null);
-  const [existingFiles, setExistingFiles] = React.useState<{ path: string; sha: string }[] | null>(null);
-
-  // Push / wipe state
-  const [pushState, setPushState] = React.useState<PushState>({ status: "idle", stage: "preparing" });
-  const [wipeProgress, setWipeProgress] = React.useState<{ stage: StageId; detail?: string; progress?: number } | null>(null);
-
-  const connected = !!connectedLogin;
-
-  // ---- Connect / disconnect ----
-  const handleConnect = async () => {
-    setCredError(null);
-    setReposLoading(true);
-    try {
-      const data = await fetchRepos(token);
-      setConnectedLogin(data.login);
-      setRepos(data.repos);
-      toast({ title: "Connected to GitHub", description: `Signed in as @${data.login}` });
-    } catch (e: any) {
-      setCredError(e?.message ?? "Failed to connect.");
-    } finally {
-      setReposLoading(false);
-    }
-  };
-
-  const handleDisconnect = () => {
-    setConnectedLogin(null);
-    setRepos([]);
-    setSelectedRepo(null);
-    setToken("");
-    setFiles([]);
-    setExistingFiles(null);
-    setLocalShas(null);
-    setPushState({ status: "idle", stage: "preparing" });
-  };
-
-  const refreshRepos = async () => {
-    if (!token) return;
-    setReposLoading(true);
-    try {
-      const data = await fetchRepos(token);
-      setRepos(data.repos);
-    } catch (e: any) {
-      toast({ title: "Refresh failed", description: e?.message, variant: "destructive" });
-    } finally {
-      setReposLoading(false);
-    }
-  };
-
-  // ---- Compute local blob SHAs whenever files change ----
-  React.useEffect(() => {
-    if (files.length === 0) {
-      setLocalShas(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const map = new Map<string, string>();
-      for (const f of files) {
-        const sha = await computeGitBlobShaAsync(f.content);
-        if (cancelled) return;
-        map.set(f.path, sha);
-      }
-      if (!cancelled) setLocalShas(map);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [files]);
-
-  // ---- Fetch existing files when repo changes ----
-  React.useEffect(() => {
-    if (!connected || !selectedRepo || !token) {
-      setExistingFiles(null);
-      return;
-    }
-    let cancelled = false;
-    setExistingFiles(null);
-    (async () => {
-      try {
-        const [owner, repo] = selectedRepo.fullName.split("/");
-        const data = await fetchExistingFiles(token, owner, repo, selectedRepo.defaultBranch ?? undefined);
-        if (!cancelled) setExistingFiles(data.files);
-      } catch {
-        if (!cancelled) setExistingFiles([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [connected, selectedRepo, token]);
-
-  // ---- Derive diff preview (smart mode) ----
-  const diffPreview = React.useMemo(() => {
-    if (mode !== "smart" || !localShas || !existingFiles) return null;
-    const existingByPath = new Map(existingFiles.map((e) => [e.path, e.sha]));
-    let added = 0, changed = 0, unchanged = 0;
-    for (const f of files) {
-      const fullPath = applyDestination(f.path, destination);
-      const ex = existingByPath.get(fullPath);
-      const sha = localShas.get(f.path);
-      if (!ex) added++;
-      else if (sha && sha === ex) unchanged++;
-      else changed++;
-    }
-    return { added, changed, unchanged };
-  }, [mode, localShas, existingFiles, files, destination]);
-
-  // ---- Push ----
-  const canPush =
-    connected &&
-    !!selectedRepo &&
-    files.length > 0 &&
-    pushState.status !== "pushing" &&
-    !!commitMessage.trim();
-
-  const handlePush = async () => {
-    if (!selectedRepo || !token) return;
-    const [owner, repo] = selectedRepo.fullName.split("/");
-
-    setPushState({ status: "pushing", stage: "preparing", detail: "Preparing files…", progress: 0.05 });
-
-    try {
-      // Stage: extracting (already done — files are in memory)
-      setPushState({ status: "pushing", stage: "extracting", detail: `${files.length} files ready`, progress: 0.1 });
-
-      // Decide which files to upload as blobs.
-      const filesToUpload: ProjectFile[] = [];
-      if (mode === "smart" && localShas && existingFiles) {
-        const existingByPath = new Map(existingFiles.map((e) => [e.path, e.sha]));
-        for (const f of files) {
-          const fullPath = applyDestination(f.path, destination);
-          const ex = existingByPath.get(fullPath);
-          const sha = localShas.get(f.path);
-          if (!ex || sha !== ex) filesToUpload.push(f);
-        }
-      } else {
-        filesToUpload.push(...files);
-      }
-
-      // Stage: uploading (chunked blob creation)
-      const blobs = await createBlobsChunked(
-        { token, owner, repo, files: filesToUpload },
-        (e) =>
-          setPushState({
-            status: "pushing",
-            stage: e.stage,
-            detail: e.detail,
-            progress: e.progress,
-          }),
-      );
-
-      // Stages comparing → complete are streamed by the server.
-      const result = await commitPush(
-        {
-          token,
-          owner,
-          repo,
-          branch: selectedRepo.defaultBranch ?? undefined,
-          mode,
-          destination,
-          commitMessage: commitMessage.trim(),
-          blobs,
-        },
-        (e) =>
-          setPushState({
-            status: "pushing",
-            stage: e.stage,
-            detail: e.detail,
-            progress: e.progress,
-          }),
-      );
-
-      setPushState({ status: "done", stage: "complete", result });
-      toast({ title: "Pushed to GitHub!", description: `${result.added + result.changed} file(s) updated.` });
-    } catch (e: any) {
-      setPushState({
-        status: "error",
-        stage: "error",
-        error: e?.message ?? "Push failed.",
-      });
-      toast({ title: "Push failed", description: e?.message, variant: "destructive" });
-    }
-  };
-
-  // ---- Wipe ----
-  const handleWipe = async () => {
-    if (!selectedRepo || !token) return;
-    const [owner, repo] = selectedRepo.fullName.split("/");
-    setWipeProgress({ stage: "comparing", detail: "Starting…", progress: 0.1 });
-    try {
-      const result = await wipeRepo(
-        { token, owner, repo, branch: selectedRepo.defaultBranch ?? undefined },
-        (e) => setWipeProgress({ stage: e.stage, detail: e.detail, progress: e.progress }),
-      );
-      setWipeProgress(null);
-      setExistingFiles([]);
-      toast({
-        title: "Repository emptied",
-        description: `All files removed from ${result.repoFullName}.`,
-      });
-    } catch (e: any) {
-      setWipeProgress(null);
-      toast({ title: "Wipe failed", description: e?.message, variant: "destructive" });
-    }
-  };
-
-  const resetForAnother = () => {
-    setFiles([]);
-    setDestination("");
-    setCommitMessage("Update project via DropToGit");
-    setPushState({ status: "idle", stage: "preparing" });
-    setLocalShas(null);
-  };
-
-  // ---- Success screen ----
-  if (pushState.status === "done" && pushState.result) {
-    return (
-      <Shell>
-        <main className="flex-1">
-          <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
-            <SuccessScreen result={pushState.result} onPushAnother={resetForAnother} />
-          </div>
-        </main>
-        <Footer />
-      </Shell>
-    );
-  }
-
-  const pushing = pushState.status === "pushing";
-
+function StepIcon({ children, color = 'primary' }: { children: React.ReactNode; color?: 'primary' | 'accent' }) {
   return (
-    <Shell>
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b">
-        <div className="absolute inset-0 bg-grid opacity-60" aria-hidden />
-        <div className="absolute -top-24 left-1/2 h-64 w-[40rem] -translate-x-1/2 rounded-full bg-brand-green/10 blur-3xl" aria-hidden />
-        <div className="relative mx-auto w-full max-w-6xl px-4 py-10 sm:py-14">
-          <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-3">
-              <Logo size={44} />
-              <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-                Drop your project.{" "}
-                <span className="text-gradient-green">Push to GitHub.</span> Done.
-              </h1>
-              <p className="max-w-xl text-muted-foreground">
-                A fast, secure drag-and-drop tool for shipping projects straight
-                to GitHub — no terminal, no Git commands. Replace everything or
-                smart-update only what changed.
-              </p>
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                <Badge variant="secondary" className="gap-1">
-                  <ShieldCheck className="h-3 w-3 text-brand-green" /> Token never stored
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <Zap className="h-3 w-3 text-brand-blue" /> Smart diffing
-                </Badge>
-                <Badge variant="secondary" className="gap-1">
-                  <GitBranch className="h-3 w-3 text-brand-green" /> Git Data API
-                </Badge>
-              </div>
-            </div>
-            <div className="hidden shrink-0 rounded-2xl border bg-card/60 p-4 shadow-sm sm:block">
-              <LogoMark size={84} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <main className="flex-1">
-        <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8 sm:py-10">
-          {/* Step 1 — Credentials */}
-          <StepCard
-            step={1}
-            icon={<ShieldCheck className="h-4 w-4" />}
-            title="Connect to GitHub"
-            description="Paste a Personal Access Token to load your repositories."
-            done={connected}
-          >
-            <CredentialsForm
-              token={token}
-              onTokenChange={setToken}
-              onConnect={handleConnect}
-              onDisconnect={handleDisconnect}
-              connectedLogin={connectedLogin}
-              loading={reposLoading}
-              error={credError}
-            />
-          </StepCard>
-
-          {/* Step 2 — Repository */}
-          {connected && (
-            <StepCard
-              step={2}
-              icon={<GitBranch className="h-4 w-4" />}
-              title="Choose a repository"
-              description="Pick an existing repo or create a new one."
-              done={!!selectedRepo}
-            >
-              <RepoPicker
-                token={token}
-                repos={repos}
-                loading={reposLoading}
-                selected={selectedRepo}
-                onSelect={setSelectedRepo}
-                onRefresh={refreshRepos}
-              />
-              {selectedRepo && (
-                <div className="mt-4 flex flex-col gap-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-2 text-sm">
-                    <Trash2 className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                    <div>
-                      <p className="font-medium text-foreground">Danger zone</p>
-                      <p className="text-xs text-muted-foreground">
-                        Permanently delete every file in this repository with a
-                        single empty commit.
-                      </p>
-                    </div>
-                  </div>
-                  <WipeRepoButton
-                    repoFullName={selectedRepo.fullName}
-                    repoName={selectedRepo.name}
-                    wiping={!!wipeProgress}
-                    onConfirm={handleWipe}
-                  />
-                </div>
-              )}
-              {wipeProgress && (
-                <div className="mt-4">
-                  <ProgressBar
-                    stage={wipeProgress.stage}
-                    detail={wipeProgress.detail}
-                    progress={wipeProgress.progress}
-                  />
-                </div>
-              )}
-            </StepCard>
-          )}
-
-          {/* Step 3 — Upload */}
-          {connected && selectedRepo && (
-            <StepCard
-              step={3}
-              icon={<Rocket className="h-4 w-4" />}
-              title="Upload your project"
-              description="Drag a .zip, a folder, or individual files."
-              done={files.length > 0}
-            >
-              {files.length === 0 ? (
-                <Dropzone onFiles={setFiles} />
-              ) : (
-                <div className="space-y-4">
-                  <UploadStats files={files} />
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <ListTree className="h-4 w-4 text-brand-blue" />
-                        Project structure
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setFiles([])}
-                        className="h-7 text-xs"
-                      >
-                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Clear
-                      </Button>
-                    </div>
-                    <FileTreePreview files={files} />
-                  </div>
-                </div>
-              )}
-            </StepCard>
-          )}
-
-          {/* Step 4 — Configure & push */}
-          {connected && selectedRepo && files.length > 0 && (
-            <StepCard
-              step={4}
-              icon={<PackageCheck className="h-4 w-4" />}
-              title="Configure & push"
-              description="Choose how to push, where to, and commit message."
-            >
-              <div className="space-y-5">
-                <ModeSelector
-                  value={mode}
-                  onChange={setMode}
-                  diff={diffPreview}
-                  disabled={pushing}
-                />
-                <DestinationForm
-                  value={destination}
-                  onChange={setDestination}
-                  disabled={pushing}
-                />
-                <div className="space-y-2">
-                  <Label htmlFor="commit-msg">Commit message</Label>
-                  <Textarea
-                    id="commit-msg"
-                    value={commitMessage}
-                    onChange={(e) => setCommitMessage(e.target.value)}
-                    disabled={pushing}
-                    rows={2}
-                    className="resize-none"
-                    placeholder="Update project via DropToGit"
-                  />
-                </div>
-
-                {pushing || pushState.status === "error" ? (
-                  <div className="rounded-xl border bg-card/60 p-4">
-                    <ProgressBar
-                      stage={pushState.stage}
-                      detail={pushState.detail}
-                      progress={pushState.progress}
-                      error={pushState.error}
-                    />
-                    {pushState.status === "error" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-3"
-                        onClick={() =>
-                          setPushState({ status: "idle", stage: "preparing" })
-                        }
-                      >
-                        Dismiss
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="w-full gap-2 text-base"
-                    onClick={handlePush}
-                    disabled={!canPush}
-                  >
-                    <Rocket className="h-5 w-5" />
-                    Push to GitHub
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                )}
-
-                {mode === "replace" && (
-                  <p className="flex items-start gap-1.5 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                    <Trash2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Replace Everything will remove all files currently in the
-                    repository that aren’t part of this upload. This happens in a
-                    single clean commit.
-                  </p>
-                )}
-              </div>
-            </StepCard>
-          )}
-        </div>
-      </main>
-
-      <Footer />
-    </Shell>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Layout shell + small helpers
-// ---------------------------------------------------------------------------
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
-          <a href="/" className="flex items-center" aria-label="DropToGit home">
-            <LogoMark size={30} />
-            <span className="ml-2 text-base font-bold tracking-tight">
-              Drop<span className="text-gradient-green">ToGit</span>
-            </span>
-          </a>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
-              <a
-                href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Github className="mr-1.5 h-4 w-4" /> Get a token
-              </a>
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+    <div className={cn(
+      'flex h-10 w-10 items-center justify-center rounded-xl shadow-sm',
+      color === 'primary'
+        ? 'bg-gradient-to-br from-primary/20 to-primary/5 ring-1 ring-primary/20'
+        : 'bg-gradient-to-br from-sky-accent/20 to-sky-accent/5 ring-1 ring-sky-accent/20',
+    )}>
       {children}
     </div>
   );
 }
 
-function Footer() {
-  return (
-    <footer className="mt-auto border-t bg-background/80">
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row">
-        <div className="flex items-center gap-2">
-          <LogoMark size={20} />
-          <span>
-            <strong className="text-foreground">DropToGit</strong> — stateless,
-            secure, no tracking.
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <ShieldCheck className="h-3 w-3 text-brand-green" /> Token never
-            stored
-          </span>
-          <span className="flex items-center gap-1">
-            <RefreshCw className="h-3 w-3 text-brand-blue" /> Built on Git Data
-            API
-          </span>
-        </div>
-      </div>
-    </footer>
-  );
-}
+export default function Home() {
+  const store = useAppStore();
+  const [showToken, setShowToken] = useState(false);
+  const [createRepoOpen, setCreateRepoOpen] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [newBranch, setNewBranch] = useState('');
 
-function StepCard({
-  step,
-  icon,
-  title,
-  description,
-  done,
-  children,
-}: {
-  step: number;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  done?: boolean;
-  children: React.ReactNode;
-}) {
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Auto-generate commit message
+  if (store.files.length > 0 && !store.commitMessage) {
+    const date = new Date().toISOString().split('T')[0];
+    store.setCommitMessage(`Upload project - ${date}`);
+  }
+
+  const canShowRepos = store.token.length > 0;
+  const canShowUpload = store.selectedRepo !== null;
+  const canShowConfigure = store.files.length > 0;
+  const selectedFilesForPush = store.files.filter((f) =>
+    store.selectedFilePaths.has(f.path),
+  );
+
+  // Fetch branches when repo is selected
+  const fetchBranches = useCallback(async () => {
+    if (!store.selectedRepo || !store.token) return;
+    setLoadingBranches(true);
+    try {
+      const [owner, repo] = store.selectedRepo.full_name.split('/');
+      const res = await fetch(
+        `/api/branches?owner=${owner}&repo=${repo}`,
+        { headers: { Authorization: `Bearer ${store.token}` } },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const branches = (data.branches || []).map((b: { name: string }) => b.name);
+        store.setBranches(branches);
+        if (branches.length > 0 && !store.branch) {
+          store.setBranch(branches[0]);
+        }
+      }
+    } catch {
+      // Silent fail — branches are optional
+    } finally {
+      setLoadingBranches(false);
+    }
+  }, [store.selectedRepo, store.token, store.branch, store.setBranches, store.setBranch]);
+
+  // Watch for repo selection to load branches
+  const prevRepoRef = useRef<string>('');
+  if (store.selectedRepo?.full_name !== prevRepoRef.current) {
+    prevRepoRef.current = store.selectedRepo?.full_name || '';
+    if (store.selectedRepo) fetchBranches();
+  }
+
+  const handlePush = useCallback(async () => {
+    if (!store.selectedRepo || selectedFilesForPush.length === 0) return;
+
+    const [owner, repo] = store.selectedRepo.full_name.split('/');
+    if (!owner || !repo) { toast.error('Invalid repository selected'); return; }
+
+    store.setStage('pushing');
+    store.setPushError('');
+
+    const filesPayload = selectedFilesForPush.map((f) => ({
+      path: f.path,
+      content: uint8ArrayToBase64(f.content),
+      size: f.size,
+    }));
+
+    abortRef.current = new AbortController();
+
+    try {
+      const res = await fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${store.token}` },
+        body: JSON.stringify({
+          owner, repo,
+          files: filesPayload,
+          commitMessage: store.commitMessage || 'Upload project',
+          mode: store.mode,
+          destination: store.destination.trim(),
+          branch: store.branch || undefined,
+        }),
+        signal: abortRef.current.signal,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Push failed' }));
+        throw new Error(data.error || `Push failed (${res.status})`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const stageMap = new Map<string, number>();
+      let stageList: ProgressStage[] = [];
+      let currentIdx = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === 'progress') {
+              if (!stageMap.has(event.stage)) {
+                stageMap.set(event.stage, stageList.length);
+                stageList.push({ stage: event.stage, message: event.message, current: event.current, total: event.total });
+              } else {
+                const idx = stageMap.get(event.stage)!;
+                stageList[idx] = { stage: event.stage, message: event.message, current: event.current, total: event.total };
+              }
+              currentIdx = stageMap.get(event.stage) || 0;
+              store.setProgress(stageList, currentIdx);
+            } else if (event.type === 'success') {
+              store.setProgress(stageList, stageList.length);
+              store.setSuccessData({
+                commitSha: event.commitSha, commitUrl: event.commitUrl,
+                repoUrl: event.repoUrl, filesUploaded: event.filesUploaded,
+                filesChanged: event.filesChanged, commitMessage: store.commitMessage,
+              });
+              store.setStage('success');
+              toast.success('Successfully pushed to GitHub!');
+            } else if (event.type === 'error') {
+              store.setPushError(event.error);
+              toast.error(event.error);
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
+      const msg = e instanceof Error ? e.message : 'An unexpected error occurred';
+      store.setPushError(msg);
+      toast.error(msg);
+    }
+  }, [store, selectedFilesForPush]);
+
+  const handleFilesReady = useCallback(
+    (files: typeof store.files, totalSize: number, errors: string[]) => {
+      store.setFiles(files, totalSize, errors);
+      if (files.length > 0) store.setStage('configure');
+    },
+    [store],
+  );
+
+  const handleRepoCreated = useCallback(
+    (repo: GitHubRepo) => {
+      store.setRepos([repo, ...store.repos]);
+      store.setSelectedRepo(repo);
+      toast.success(`Repository ${repo.name} created!`);
+    },
+    [store],
+  );
+
+  const handleCreateBranch = useCallback(async () => {
+    if (!newBranch.trim()) return;
+    const name = newBranch.trim();
+    store.setBranches([...store.branches, name]);
+    store.setBranch(name);
+    setNewBranch('');
+    toast.success(`Will push to new branch: ${name}`);
+  }, [newBranch, store]);
+
   return (
-    <Card className="animate-float-in overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted/60 text-sm font-semibold">
-            {done ? (
-              <PackageCheck className="h-4 w-4 text-brand-green" />
-            ) : (
-              step
-            )}
-          </div>
-          <div className="min-w-0">
-            <CardTitle className="flex items-center gap-1.5 text-base">
-              {icon}
-              {title}
-            </CardTitle>
-            <CardDescription className="text-xs">{description}</CardDescription>
-          </div>
+    <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+      {/* ─── Hero ──────────────────────────────────────────── */}
+      <motion.div
+        className="text-center space-y-3"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-medium text-primary mb-4">
+          <Zap className="h-3.5 w-3.5" />
+          Free &amp; Open Source
         </div>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+          Drop your project.{' '}
+          <span className="bg-gradient-to-r from-primary to-sky-accent bg-clip-text text-transparent">Push</span>{' '}
+          it to GitHub.
+        </h1>
+        <p className="text-muted-foreground max-w-md mx-auto text-sm leading-relaxed">
+          Upload projects directly to GitHub without the terminal.
+          No Git commands. No CLI. Just drag, drop, and push.
+        </p>
+      </motion.div>
+
+      <div className="space-y-6">
+        {/* ─── Step 1: GitHub Token ──────────────────────── */}
+        <motion.section {...fadeUp} layout>
+          <Card className="overflow-hidden ring-1 ring-border/50">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <StepIcon><KeyRound className="h-5 w-5 text-primary" /></StepIcon>
+                <div>
+                  <CardTitle className="text-base">GitHub Personal Access Token</CardTitle>
+                  <CardDescription>Required to authenticate with the GitHub API.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="relative">
+                <Input
+                  type={showToken ? 'text' : 'password'}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  value={store.token}
+                  onChange={(e) => store.setToken(e.target.value.trim())}
+                  className="pr-10 font-mono text-sm"
+                  aria-label="GitHub Personal Access Token"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowToken(!showToken)}
+                  aria-label={showToken ? 'Hide token' : 'Show token'}
+                >
+                  {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                <Shield className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+                <p>
+                  Your token is used <strong>only for this session</strong> and is never stored,
+                  logged, or shared. It is sent directly to the GitHub API over HTTPS.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.section>
+
+        {/* ─── Step 2: Repository ──────────────────────── */}
+        <AnimatePresence>
+          {canShowRepos && (
+            <motion.section {...fadeUp} layout>
+              <Card className="overflow-hidden ring-1 ring-border/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <StepIcon color="accent"><GitBranch className="h-5 w-5 text-sky-accent" /></StepIcon>
+                    <div>
+                      <CardTitle className="text-base">Repository</CardTitle>
+                      <CardDescription>Select or create a repository to push to.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <RepoPicker
+                    token={store.token}
+                    selectedRepo={store.selectedRepo}
+                    onSelect={store.setSelectedRepo}
+                    onCreateRepo={() => setCreateRepoOpen(true)}
+                    disabled={store.stage === 'pushing'}
+                  />
+                  {store.selectedRepo && (
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <p className="text-xs text-muted-foreground">
+                        <Github className="inline h-3 w-3 mr-1" />
+                        <a href={store.selectedRepo.html_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          {store.selectedRepo.full_name}
+                        </a>
+                      </p>
+                      <WipeRepoButton
+                        owner={store.selectedRepo.full_name.split('/')[0]}
+                        repoName={store.selectedRepo.name}
+                        token={store.token}
+                        disabled={store.stage === 'pushing'}
+                        onWiped={() => toast.success('All files deleted successfully')}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Step 3: Upload ────────────────────── */}
+        <AnimatePresence>
+          {canShowUpload && store.stage !== 'success' && (
+            <motion.section {...fadeUp} layout>
+              <Card className="overflow-hidden ring-1 ring-border/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <StepIcon><Upload className="h-5 w-5 text-primary" /></StepIcon>
+                    <div>
+                      <CardTitle className="text-base">Upload Project</CardTitle>
+                      <CardDescription>Drag &amp; drop a .zip file or folder.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Dropzone onFilesReady={handleFilesReady} isProcessing={store.stage === 'pushing'} />
+                </CardContent>
+              </Card>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Step 3.5: Analysis ──────────────────────── */}
+        <AnimatePresence>
+          {canShowConfigure && store.stage !== 'success' && (
+            <motion.section {...fadeUp} layout>
+              <AnalysisSection />
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Step 4: Configure & Push ─────────────────── */}
+        <AnimatePresence>
+          {canShowConfigure && store.stage !== 'success' && (
+            <motion.section {...fadeUp} layout>
+              <Card className="overflow-hidden ring-1 ring-border/50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <StepIcon color="accent"><Zap className="h-5 w-5 text-sky-accent" /></StepIcon>
+                    <div>
+                      <CardTitle className="text-base">Configure &amp; Push</CardTitle>
+                      <CardDescription>Review your files and push to GitHub.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {/* File Tree with checkboxes */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Files Preview <span className="text-muted-foreground font-normal">(click a file to preview)</span></label>
+                    <FileTreePreview
+                      files={store.files}
+                      selectable
+                      selectedPaths={store.selectedFilePaths}
+                      onToggleFile={store.toggleFilePath}
+                      onFileClick={store.setPreviewFile}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Branch Selector */}
+                  <div className="space-y-2">
+                    <Label>Branch</Label>
+                    <div className="flex gap-2">
+                      <Select value={store.branch} onValueChange={store.setBranch}>
+                        <SelectTrigger className="flex-1 font-mono text-sm">
+                          <SelectValue placeholder={loadingBranches ? 'Loading…' : 'Select branch'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {store.branches.map((b) => (
+                            <SelectItem key={b} value={b} className="font-mono">{b}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="relative flex-1">
+                        <Input
+                          placeholder="new-branch-name"
+                          value={newBranch}
+                          onChange={(e) => setNewBranch(e.target.value)}
+                          className="font-mono text-sm pr-9"
+                          onKeyDown={(e) => e.key === 'Enter' && handleCreateBranch()}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                          onClick={handleCreateBranch}
+                          disabled={!newBranch.trim()}
+                          aria-label="Create new branch"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Push Mode */}
+                  <div className="space-y-3">
+                    <Label>Push Mode</Label>
+                    <RadioGroup
+                      value={store.mode}
+                      onValueChange={(v) => store.setMode(v as PushMode)}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    >
+                      <label
+                        htmlFor="mode-replace"
+                        className={cn(
+                          'relative flex cursor-pointer flex-col rounded-xl border-2 p-4 transition-all hover:bg-muted/30',
+                          store.mode === 'replace' ? 'border-primary bg-primary/5 shadow-sm shadow-primary/5' : 'border-border',
+                        )}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <RadioGroupItem value="replace" id="mode-replace" className="mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">Replace Everything</p>
+                            <p className="text-xs text-muted-foreground">
+                              Completely replace the repository contents. Old files will be removed in a single clean commit.
+                            </p>
+                          </div>
+                        </div>
+                        {store.mode === 'replace' && (
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-x-0 bottom-0 h-0.5 bg-primary rounded-b-xl" />
+                        )}
+                      </label>
+                      <label
+                        htmlFor="mode-smart"
+                        className={cn(
+                          'relative flex cursor-pointer flex-col rounded-xl border-2 p-4 transition-all hover:bg-muted/30',
+                          store.mode === 'smart' ? 'border-sky-accent bg-sky-accent/5 shadow-sm shadow-sky-accent/5' : 'border-border',
+                        )}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <RadioGroupItem value="smart" id="mode-smart" className="mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">Smart Update</p>
+                            <p className="text-xs text-muted-foreground">Only upload new and changed files. Existing files are preserved.</p>
+                          </div>
+                        </div>
+                        {store.mode === 'smart' && (
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-x-0 bottom-0 h-0.5 bg-sky-accent rounded-b-xl" />
+                        )}
+                      </label>
+                    </RadioGroup>
+                  </div>
+
+                  {store.mode === 'replace' && (
+                    <div className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg p-3">
+                      <Shield className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <p><strong>Destructive action:</strong> This will remove all existing files in the repository that are not in your upload. Make sure you have a backup if needed.</p>
+                    </div>
+                  )}
+
+                  {/* Destination Path */}
+                  <div className="space-y-2">
+                    <Label htmlFor="destination">Destination Subfolder (optional)</Label>
+                    <Input
+                      id="destination"
+                      placeholder="e.g., src/project — leave empty for root"
+                      value={store.destination}
+                      onChange={(e) => store.setDestination(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+
+                  {/* Commit Message */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="commit-msg">Commit Message</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs gap-1 px-2"
+                        onClick={() => {
+                          const date = new Date().toISOString().split('T')[0];
+                          store.setCommitMessage(`Upload project - ${date}`);
+                          toast.success('Suggested a commit message');
+                        }}
+                      >
+                        <Wand2 className="h-3 w-3" />
+                        Suggest
+                      </Button>
+                    </div>
+                    <Textarea
+                      id="commit-msg"
+                      placeholder="Describe your changes..."
+                      value={store.commitMessage}
+                      onChange={(e) => store.setCommitMessage(e.target.value)}
+                      className="min-h-[80px] resize-y text-sm"
+                    />
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {selectedFilesForPush.length}/{store.files.length} files selected
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{store.mode === 'replace' ? 'Replace' : 'Smart Update'}</Badge>
+                    {store.branch && (
+                      <Badge variant="secondary" className="text-xs font-mono">
+                        <GitBranch className="mr-1 h-3 w-3" />{store.branch}
+                      </Badge>
+                    )}
+                    {store.destination && (
+                      <Badge variant="secondary" className="text-xs font-mono">→ {store.destination}</Badge>
+                    )}
+                  </div>
+
+                  {/* Push Button */}
+                  <Button
+                    size="lg"
+                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
+                    onClick={handlePush}
+                    disabled={
+                      !store.selectedRepo ||
+                      selectedFilesForPush.length === 0 ||
+                      !store.commitMessage.trim() ||
+                      store.stage === 'pushing'
+                    }
+                  >
+                    <Upload className="mr-2 h-5 w-5" />
+                    Push {selectedFilesForPush.length} File{selectedFilesForPush.length !== 1 ? 's' : ''} to GitHub
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Step 5: Progress ──────────────────────── */}
+        <AnimatePresence>
+          {store.stage === 'pushing' && (
+            <motion.section {...fadeUp} layout>
+              <ProgressBar
+                stages={store.progressStages}
+                currentStage={store.currentProgressStage}
+                isComplete={false}
+                error={store.pushError}
+              />
+              {store.pushError && (
+                <Button variant="outline" className="w-full mt-4" onClick={() => store.setStage('configure')}>
+                  Go Back and Retry
+                </Button>
+              )}
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Step 6: Success ──────────────────────── */}
+        <AnimatePresence>
+          {store.stage === 'success' && store.successData && (
+            <motion.section {...fadeUp} layout>
+              <SuccessScreen
+                repoUrl={store.successData.repoUrl}
+                commitSha={store.successData.commitSha}
+                commitUrl={store.successData.commitUrl}
+                commitMessage={store.successData.commitMessage}
+                filesUploaded={store.successData.filesUploaded}
+                filesChanged={store.successData.filesChanged}
+                onPushAnother={() => store.resetPush()}
+              />
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* File Preview Dialog */}
+      <FilePreview
+        file={store.previewFile}
+        open={!!store.previewFile}
+        onOpenChange={(open) => { if (!open) store.setPreviewFile(null); }}
+      />
+
+      {/* Create Repo Dialog */}
+      <CreateRepoDialog
+        open={createRepoOpen}
+        onOpenChange={setCreateRepoOpen}
+        token={store.token}
+        onCreated={handleRepoCreated}
+      />
+    </div>
   );
 }

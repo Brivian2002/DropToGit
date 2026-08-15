@@ -1,8 +1,10 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/droptogit/theme-provider";
+import { Toaster } from "sonner";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,44 +17,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DropToGit — Drop your project. Push to GitHub. Done.",
+  title: {
+    default: "DropToGit — Drag & Drop Projects to GitHub",
+    template: "%s — DropToGit",
+  },
   description:
-    "A fast, secure drag-and-drop tool to push projects directly to GitHub. No terminal, no Git commands. Replace everything or smart-update only what changed.",
+    "Upload projects directly to GitHub without the terminal. Drag, drop, push. Simple, fast, secure.",
   keywords: [
-    "DropToGit",
     "GitHub",
-    "upload to GitHub",
-    "drag and drop git",
-    "push to GitHub",
+    "Git",
+    "upload",
+    "drag and drop",
+    "deploy",
     "developer tool",
+    "DropToGit",
   ],
-  authors: [{ name: "DropToGit" }],
-  applicationName: "DropToGit",
+  authors: [{ name: "Bright Dumashie" }],
+  creators: [{ name: "Bright Dumashie", url: "https://droptogit.vercel.app/about-me" }],
   icons: {
-    icon: [{ url: "/droptogit-icon.svg", type: "image/svg+xml" }],
-    shortcut: ["/droptogit-icon.svg"],
-    apple: [{ url: "/droptogit-icon.svg" }],
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
   openGraph: {
-    title: "DropToGit — Drop your project. Push to GitHub. Done.",
+    title: "DropToGit — Drag & Drop Projects to GitHub",
     description:
-      "Drag-and-drop tool to push projects directly to GitHub. No terminal, no Git commands.",
-    siteName: "DropToGit",
+      "Upload projects directly to GitHub without the terminal. Drag, drop, push.",
     type: "website",
+    siteName: "DropToGit",
   },
   twitter: {
     card: "summary_large_image",
     title: "DropToGit",
     description:
-      "Drag-and-drop tool to push projects directly to GitHub. No terminal, no Git commands.",
+      "Upload projects directly to GitHub without the terminal. Drag, drop, push.",
   },
-};
-
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f9f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#161b1d" },
-  ],
 };
 
 export default function RootLayout({
@@ -71,8 +69,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
+          <div className="min-h-screen flex flex-col">
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

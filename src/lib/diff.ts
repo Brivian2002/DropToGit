@@ -1,73 +1,123 @@
-import type { DiffResult, ExistingFile, ProjectFile } from "@/lib/types";
-
-/**
- * Compare uploaded files against the existing repository tree.
- *
- * Smart Update only sends NEW and CHANGED files to GitHub; UNCHANGED files
- * are skipped entirely (no blob creation, no tree entry) because the base
- * tree already references the same blob SHA.
- *
- * Comparison is by Git blob SHA, which already encodes content — so two files
- * with identical bytes produce identical SHAs regardless of path.
- */
-
-/** Async Git blob SHA-1 computation. */
-export async function computeGitBlobShaAsync(
-  content: Uint8Array,
-): Promise<string> {
-  const header = `blob ${content.byteLength}\u0000`;
-  const headerBytes = new TextEncoder().encode(header);
-  const buf = new Uint8Array(headerBytes.byteLength + content.byteLength);
-  buf.set(headerBytes, 0);
-  buf.set(content, headerBytes.byteLength);
-
-  // Web Crypto supports SHA-1 in both browser and Node 18+.
-  const digest = await crypto.subtle.digest("SHA-1", buf);
-  return toHex(new Uint8Array(digest));
+export interface DiffResult {
+  newFiles: string[];
+  changedFiles: string[];
+  unchangedFiles: string[];
+  deletedFiles: string[];
 }
 
-function toHex(bytes: Uint8Array): string {
-  let hex = "";
-  for (let i = 0; i < bytes.length; i++) {
-    hex += bytes[i].toString(16).padStart(2, "0");
+export interface ExistingFile {
+  path: string;
+  sha: string;
+  size: number;
+}
+
+// Compare uploaded files with existing repo files
+// Returns what's new, changed, unchanged, and what would be deleted (in replace mode)
+export function computeDiff(
+  uploadedPaths: string[],
+  existingFiles: ExistingFile[],
+  mode: 'replace' | 'smart'
+): DiffResult {
+  const existingMap = new Map(existingFiles.map((f) => [f.path, f]));
+  const uploadedSet = new Set(uploadedPaths);
+
+  const newFiles: string[] = [];
+  const changedFiles: string[] = [];
+  const unchangedFiles: string[] = [];
+  const deletedFiles: string[] = [];
+
+  for (const path of uploadedPaths) {
+    const existing = existingMap.get(path);
+    if (!existing) {
+      newFiles.push(path);
+    }
+    // Note: We can't truly detect "changed" without comparing content/sha
+    // which requires fetching. For smart update, we consider everything as
+    // potentially changed unless we do a deeper check. We'll mark files that
+    // exist in both as "potentially unchanged" and the push logic will handle it.
   }
-  return hex;
-}
 
-export interface DiffInput {
-  uploaded: ProjectFile[];
-  existing: ExistingFile[];
-  /** Uploaded files with their locally-computed blob SHAs. */
-  uploadedShas: Map<string, string>;
-}
-
-export function diffFiles(input: DiffInput): DiffResult {
-  const existingByPath = new Map(input.existing.map((e) => [e.path, e.sha]));
-
-  const added: string[] = [];
-  const changed: string[] = [];
-  const unchanged: string[] = [];
-
-  for (const f of input.uploaded) {
-    const existingSha = existingByPath.get(f.path);
-    const newSha = input.uploadedShas.get(f.path);
-    if (!existingSha) {
-      added.push(f.path);
-    } else if (newSha && newSha === existingSha) {
-      unchanged.push(f.path);
+  // For smart mode: files in repo but not in upload are "unchanged" (kept)
+  // For replace mode: files in repo but not in upload are "deleted"
+  for (const existing of existingFiles) {
+    if (!uploadedSet.has(existing.path)) {
+      if (mode === 'replace') {
+        deletedFiles.push(existing.path);
+      }
     } else {
-      changed.push(f.path);
+      unchangedFiles.push(existing.path);
     }
   }
 
-  return { added, changed, unchanged };
+  // Any uploaded file not in existing is new
+  for (const path of uploadedPaths) {
+    if (!existingMap.has(path)) {
+      newFiles.push(path);
+    } else {
+      // File exists in both - for smart update we can't know without SHA comparison
+      // We'll upload all and let the API handle it, but report them as potentially changed
+      changedFiles.push(path);
+    }
+  }
+
+  return { newFiles, changedFiles, unchangedFiles, deletedFiles };
 }
 
-/** Files that actually need a blob upload (added + changed). */
-export function filesNeedingUpload(
-  uploaded: ProjectFile[],
-  diff: DiffResult,
-): ProjectFile[] {
-  const needed = new Set([...diff.added, ...diff.changed]);
-  return uploaded.filter((f) => needed.has(f.path));
+// Build a nested tree structure from file paths
+export interface TreeNode {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  children: TreeNode[];
+  size?: number;
+}
+
+export function buildFileTree(
+  files: { path: string; size: number }[]
+): TreeNode {
+  const root: TreeNode = {
+    name: 'root',
+    path: '',
+    type: 'directory',
+    children: [],
+  };
+
+  const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path));
+
+  for (const file of sortedFiles) {
+    const parts = file.path.split('/');
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isFile = i === parts.length - 1;
+      const fullPath = parts.slice(0, i + 1).join('/');
+
+      let child = current.children.find((c) => c.name === part);
+      if (!child) {
+        child = {
+          name: part,
+          path: fullPath,
+          type: isFile ? 'file' : 'directory',
+          children: [],
+          ...(isFile ? { size: file.size } : {}),
+        };
+        current.children.push(child);
+      }
+
+      current = child;
+    }
+  }
+
+  // Sort: directories first, then files, both alphabetically
+  const sortChildren = (node: TreeNode) => {
+    node.children.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    node.children.forEach(sortChildren);
+  };
+  sortChildren(root);
+
+  return root;
 }
