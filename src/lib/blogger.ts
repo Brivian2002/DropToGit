@@ -106,7 +106,7 @@ export interface BloggerListResponse {
   totalItems?: number;
 }
 
-const BLOG_REVALIDATE_SECONDS = 3600;
+const BLOG_REVALIDATE_SECONDS = 60;
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim();

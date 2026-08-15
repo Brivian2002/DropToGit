@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     'Updates, guides, and insights about DropToGit, web development, and open source.',
 };
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 interface BlogPageProps {
   searchParams: Promise<{ tag?: string | string[] }>;
