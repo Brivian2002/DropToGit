@@ -4,6 +4,7 @@ export const BLOG_LABELS = [
   { label: 'News', icon: 'newspaper' },
   { label: 'Tech', icon: 'cpu' },
   { label: 'How To', icon: 'wrench' },
+  { label: 'Teachings', icon: 'book-open' },
   { label: 'Did You Know?', icon: 'lightbulb' },
   { label: 'Tutorials', icon: 'book-open' },
   { label: 'Open Source', icon: 'globe' },
@@ -17,6 +18,7 @@ const BLOG_LABEL_DESCRIPTIONS: Record<string, string> = {
   News: 'Announcements and breaking updates',
   Tech: 'Technology deep-dives and analysis',
   'How To': 'Step-by-step guides and practical help',
+  Teachings: 'Lessons, principles, and practical wisdom',
   'Did You Know?': 'Interesting facts and useful tips',
   Tutorials: 'In-depth walkthroughs',
   'Open Source': 'Open source projects and contributions',
@@ -65,6 +67,16 @@ export function getLabelByValue(label: string | null | undefined): BlogLabel | u
   return BLOG_LABELS.find((entry) => entry.label === label);
 }
 
+/** Return every configured menu label that exactly matches a Blogger label. */
+export function getMatchingLabels(labels?: string[]): BlogLabel[] {
+  const exactLabels = new Set((labels || []).map((label) => label.trim()));
+  return BLOG_LABELS.filter((entry) => exactLabels.has(entry.label));
+}
+
+export function getMatchingCategoryKeys(labels?: string[]): string[] {
+  return getMatchingLabels(labels).map((entry) => labelToKey(entry.label));
+}
+
 export function getCategoryByKey(key: string): BlogCategory {
   return BLOG_CATEGORIES.find((category) => category.key === key) || UNCATEGORIZED_CATEGORY;
 }
@@ -75,8 +87,7 @@ export function getCategoryByLabel(label: string | null | undefined): BlogCatego
 }
 
 export function categorizePost(labels?: string[]): string {
-  const matchedLabel = labels?.find((label) => Boolean(getLabelByValue(label)));
-  return matchedLabel ? labelToKey(matchedLabel) : UNCATEGORIZED_CATEGORY.key;
+  return getMatchingCategoryKeys(labels)[0] || UNCATEGORIZED_CATEGORY.key;
 }
 
 export interface BloggerPost {
@@ -96,9 +107,10 @@ export interface BloggerPost {
   replies?: { totalItems: string };
   featuredImage?: string;
   category: string;
+  categories: string[];
 }
 
-type BloggerApiPost = Omit<BloggerPost, 'slug' | 'featuredImage' | 'category'>;
+type BloggerApiPost = Omit<BloggerPost, 'slug' | 'featuredImage' | 'category' | 'categories'>;
 
 export interface BloggerListResponse {
   items?: BloggerApiPost[];
@@ -133,11 +145,13 @@ export function extractFeaturedImage(content: string): string | undefined {
 }
 
 function normalizePost(item: BloggerApiPost): BloggerPost {
+  const categories = getMatchingCategoryKeys(item.labels);
   return {
     ...item,
     slug: extractSlug(item.url) || item.id,
     featuredImage: extractFeaturedImage(item.content),
-    category: categorizePost(item.labels),
+    category: categories[0] || UNCATEGORIZED_CATEGORY.key,
+    categories,
   };
 }
 
@@ -162,7 +176,7 @@ export async function fetchBlogPosts(
     fields: 'items(id,title,content,published,updated,url,author,labels,replies/totalItems),nextPageToken,totalItems',
   });
   if (pageToken) params.set('pageToken', pageToken);
-  if (tag && getLabelByValue(tag)) params.set('labels', tag);
+  if (tag?.trim()) params.set('labels', tag.trim());
 
   const res = await fetch(
     `https://www.googleapis.com/blogger/v3/blogs/${blogId}/posts?${params.toString()}`,
@@ -177,6 +191,20 @@ export async function fetchBlogPosts(
     nextPageToken: data.nextPageToken,
     totalItems: data.totalItems,
   };
+}
+
+export async function fetchAllBlogPosts(maxPages = 10): Promise<BloggerPost[]> {
+  const allPosts: BloggerPost[] = [];
+  let pageToken: string | undefined;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const result = await fetchBlogPosts(500, pageToken);
+    allPosts.push(...result.posts);
+    if (!result.nextPageToken || result.error) break;
+    pageToken = result.nextPageToken;
+  }
+
+  return allPosts;
 }
 
 export async function fetchBlogPost(slug: string): Promise<BloggerPost | null> {

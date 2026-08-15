@@ -80,7 +80,8 @@ function PostCardSkeleton() {
 // ─── Blog Post Card ────────────────────────────────────────────────
 
 function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void }) {
-  const cat = getCategoryByKey(post.category);
+  const matchedCategories = post.categories.map((categoryKey) => getCategoryByKey(categoryKey));
+  const visibleCategories = matchedCategories.length > 0 ? matchedCategories : [getCategoryByKey(post.category)];
 
   return (
     <Card
@@ -102,12 +103,19 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
             <span className="text-xs">No image</span>
           </div>
         )}
-        {/* Category badge overlay */}
-        <div className="absolute top-3 left-3">
-          <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm text-[11px] font-medium hover:bg-black/60">
-            <CategoryIcon name={cat.icon} className="mr-1.5 h-3 w-3" />
-            {cat.label}
-          </Badge>
+        {/* Matching Blogger label badges */}
+        <div className="absolute top-3 left-3 flex max-w-[90%] flex-wrap gap-1.5">
+          {visibleCategories.slice(0, 3).map((category) => (
+            <Badge key={category.key} className="bg-black/60 text-white border-0 backdrop-blur-sm text-[11px] font-medium hover:bg-black/60">
+              <CategoryIcon name={category.icon} className="mr-1.5 h-3 w-3" />
+              {category.label}
+            </Badge>
+          ))}
+          {visibleCategories.length > 3 && (
+            <Badge className="bg-black/60 text-white border-0 backdrop-blur-sm text-[11px] font-medium hover:bg-black/60">
+              +{visibleCategories.length - 3}
+            </Badge>
+          )}
         </div>
       </div>
 
