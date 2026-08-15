@@ -20,6 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   type BloggerPost,
   type BlogCategory,
+  type BlogFetchError,
   BLOG_CATEGORIES,
   BLOG_LABELS,
   labelToKey,
@@ -54,6 +55,7 @@ interface BlogContentProps {
   posts: BloggerPost[];
   activeTag?: string;
   hasAnyPosts: boolean;
+  blogError?: BlogFetchError;
 }
 
 // ─── Post Card Skeleton ────────────────────────────────────────────
@@ -308,7 +310,7 @@ function PostReader({
 
 // ─── Main BlogContent Component ────────────────────────────────────
 
-export function BlogContent({ posts, activeTag, hasAnyPosts }: BlogContentProps) {
+export function BlogContent({ posts, activeTag, hasAnyPosts, blogError }: BlogContentProps) {
   const [selectedPost, setSelectedPost] = useState<BloggerPost | null>(null);
   const [readerOpen, setReaderOpen] = useState(false);
   const [fullPost, setFullPost] = useState<BloggerPost | null>(null);
@@ -371,7 +373,25 @@ export function BlogContent({ posts, activeTag, hasAnyPosts }: BlogContentProps)
       )}
 
       {/* Post grid */}
-      {!hasAnyPosts ? (
+      {blogError === 'missing-config' ? (
+        <Card>
+          <CardContent className="py-20 text-center space-y-3">
+            <p className="text-muted-foreground text-lg">Blogger is not connected yet</p>
+            <p className="text-sm text-muted-foreground">
+              Add BLOGGER_API_KEY and BLOGGER_BLOG_ID to the Vercel Production environment, then redeploy.
+            </p>
+          </CardContent>
+        </Card>
+      ) : blogError === 'api-error' ? (
+        <Card>
+          <CardContent className="py-20 text-center space-y-3">
+            <p className="text-muted-foreground text-lg">Blogger could not be reached</p>
+            <p className="text-sm text-muted-foreground">
+              Check that Blogger API v3 is enabled and the API key permits server-side requests from Vercel.
+            </p>
+          </CardContent>
+        </Card>
+      ) : !hasAnyPosts ? (
         <Card>
           <CardContent className="py-20 text-center space-y-3">
             <p className="text-muted-foreground text-lg">No posts yet</p>

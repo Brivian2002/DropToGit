@@ -106,6 +106,15 @@ export interface BloggerListResponse {
   totalItems?: number;
 }
 
+export type BlogFetchError = 'missing-config' | 'api-error';
+
+type BlogListResult = {
+  posts: BloggerPost[];
+  nextPageToken?: string;
+  totalItems?: number;
+  error?: BlogFetchError;
+};
+
 const BLOG_REVALIDATE_SECONDS = 60;
 
 function stripHtml(html: string): string {
@@ -143,9 +152,9 @@ export async function fetchBlogPosts(
   maxResults = 50,
   pageToken?: string,
   tag?: string,
-): Promise<{ posts: BloggerPost[]; nextPageToken?: string; totalItems?: number }> {
+): Promise<BlogListResult> {
   const { apiKey, blogId } = getBloggerConfig();
-  if (!apiKey || !blogId) return { posts: [] };
+  if (!apiKey || !blogId) return { posts: [], error: 'missing-config' };
 
   const params = new URLSearchParams({
     key: apiKey,
@@ -160,7 +169,7 @@ export async function fetchBlogPosts(
     { next: { revalidate: BLOG_REVALIDATE_SECONDS } },
   );
 
-  if (!res.ok) return { posts: [] };
+  if (!res.ok) return { posts: [], error: 'api-error' };
 
   const data: BloggerListResponse = await res.json();
   return {

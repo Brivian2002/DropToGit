@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { BlogContent } from '@/components/BlogContent';
-import { fetchBlogPosts, getLabelByValue } from '@/lib/blogger';
+import { fetchBlogPosts, getLabelByValue, type BlogFetchError } from '@/lib/blogger';
 import { Card, CardContent } from '@/components/ui/card';
 
 export const metadata: Metadata = {
@@ -21,10 +21,14 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const rawTag = Array.isArray(params.tag) ? params.tag[0] : params.tag;
   const activeTag = getLabelByValue(rawTag)?.label;
 
-  const [{ posts }, overall] = await Promise.all([
+  const [listResult, overall] = await Promise.all([
     fetchBlogPosts(50, undefined, activeTag),
-    activeTag ? fetchBlogPosts(1) : Promise.resolve({ posts: [] }),
+    activeTag
+      ? fetchBlogPosts(1)
+      : Promise.resolve({ posts: [], error: undefined as BlogFetchError | undefined }),
   ]);
+  const { posts, error: listError } = listResult;
+  const blogError: BlogFetchError | undefined = listError || overall.error;
 
   return (
     <Suspense
@@ -51,6 +55,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
         posts={posts}
         activeTag={activeTag}
         hasAnyPosts={activeTag ? overall.posts.length > 0 : posts.length > 0}
+        blogError={blogError}
       />
     </Suspense>
   );

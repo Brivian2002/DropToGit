@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "sonner";
+import Script from "next/script";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
@@ -34,6 +35,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Bright Dumashie" }],
   creator: "Bright Dumashie",
+  verification: {
+    google: "rFXCJfN2PKInkfgkJx2gD9GTfN27-evXzaTyxQG2zGk",
+  },
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
@@ -63,6 +67,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
+        <Script
+          id="google-adsense"
+          async
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7744791430316817"
+          crossOrigin="anonymous"
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
