@@ -8,11 +8,9 @@ import {
   CheckCircle2,
   ChevronRight,
   Circle,
-  Cloud,
   Code2,
   Eye,
   EyeOff,
-  FileCode2,
   GitBranch,
   Github,
   KeyRound,
@@ -38,7 +36,6 @@ import { ProgressBar, type ProgressStage } from '@/components/ProgressBar';
 import { RepoPicker } from '@/components/RepoPicker';
 import { SuccessScreen } from '@/components/SuccessScreen';
 import { WipeRepoButton } from '@/components/WipeRepoButton';
-import { ZaiLoader } from '@/components/ZaiLoader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +43,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -262,7 +258,7 @@ export default function Home() {
               From project folder to <span className="bg-gradient-to-r from-primary via-primary to-sky-accent bg-clip-text text-transparent">GitHub.</span>
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
-              DropToGit turns a local folder or z.ai build into a clean GitHub commit. No terminal choreography, no local setup, and no credential storage.
+              DropToGit turns a local project folder into a clean GitHub commit. No terminal choreography, no local setup, and no credential storage.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-2"><TerminalSquare className="h-3.5 w-3.5 text-primary" />No CLI required</span>
@@ -280,7 +276,7 @@ export default function Home() {
               <div className="space-y-3 py-5">
                 {[
                   { icon: KeyRound, title: 'Connect securely', copy: 'Use a fine-grained GitHub token' },
-                  { icon: Upload, title: 'Add your project', copy: 'Drop a folder, zip, or z.ai session' },
+                  { icon: Upload, title: 'Add your project', copy: 'Drop a folder, zip, or browse your files' },
                   { icon: GitBranch, title: 'Create a clean commit', copy: 'Choose the branch and push' },
                 ].map((item, index) => {
                   const Icon = item.icon;
@@ -325,13 +321,9 @@ export default function Home() {
               {canShowUpload && store.stage !== 'success' && (
                 <motion.section {...fadeUp} layout>
                   <Card className="overflow-hidden border-border/80 bg-card/78">
-                    <SectionHeader step="03" title="Add your project" description="Use local files for a fast upload, or pull a generated project from a z.ai chat session." icon={<Upload className="h-5 w-5" />} />
+                    <SectionHeader step="03" title="Add your project" description="Drop a folder or zip file, or browse for local files from your computer." icon={<Upload className="h-5 w-5" />} />
                     <CardContent>
-                      <Tabs defaultValue="local" className="w-full">
-                        <TabsList className="mb-5 grid h-11 w-full grid-cols-2 rounded-xl bg-muted/70 p-1"><TabsTrigger value="local" className="rounded-lg text-xs sm:text-sm"><FileCode2 className="h-4 w-4" />Local files</TabsTrigger><TabsTrigger value="zai" className="rounded-lg text-xs sm:text-sm"><Cloud className="h-4 w-4" />z.ai session</TabsTrigger></TabsList>
-                        <TabsContent value="local" className="mt-0"><Dropzone onFilesReady={handleFilesReady} isProcessing={store.stage === 'pushing'} /></TabsContent>
-                        <TabsContent value="zai" className="mt-0"><div className="mb-4 rounded-xl border border-sky-accent/15 bg-sky-accent/6 p-3.5 text-xs leading-5 text-muted-foreground"><p><strong className="text-foreground">Have a build in z.ai?</strong> Enter the session identifiers for the chat that contains your project files. The files are fetched into this browser session for review before pushing.</p></div><ZaiLoader disabled={store.stage === 'pushing'} /></TabsContent>
-                      </Tabs>
+                      <Dropzone onFilesReady={handleFilesReady} isProcessing={store.stage === 'pushing'} />
                     </CardContent>
                   </Card>
                 </motion.section>

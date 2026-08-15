@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s — DropToGit",
   },
   description:
-    "Move a local folder or z.ai project into a clean GitHub commit from the browser. No CLI, no local setup, no credential storage.",
+    "Move a local project folder into a clean GitHub commit from the browser. No CLI, no local setup, no credential storage.",
   keywords: [
     "GitHub",
     "Git",
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "DropToGit — Ship projects to GitHub without the terminal",
     description:
-      "Move a local folder or z.ai project into a clean GitHub commit from the browser.",
+      "Move a local project folder into a clean GitHub commit from the browser.",
     type: "website",
     siteName: "DropToGit",
   },

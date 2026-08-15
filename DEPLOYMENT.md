@@ -33,9 +33,9 @@ If a remote already exists, skip the `git remote add origin` command and push no
 
 In Vercel, choose **Add New Project**, import the GitHub repository, and allow Vercel to detect the Next.js framework. Keep the default build settings; the repository’s `package.json` and `vercel.json` are already configured for the application.
 
-The main GitHub upload flow does not require a server-side GitHub token. Users enter a fine-grained Personal Access Token into the browser for a single session. If the optional Blogger integration is used, add `BLOGGER_API_KEY` and `BLOGGER_BLOG_ID` as Vercel environment variables. The optional z.ai source can use `ZAI_API_BASE` when a non-default API base is required.
+The main GitHub upload flow does not require a server-side GitHub token. Users enter a fine-grained Personal Access Token into the browser for a single session. If the optional Blogger integration is used, add `BLOGGER_API_KEY` and `BLOGGER_BLOG_ID` as Vercel environment variables.
 
-After the first deployment, verify the homepage, `/docs`, `/blog`, and `/api/zai/fetch` routes. Add the Vercel production URL to any social metadata or creator links if the canonical domain changes from `droptogit.vercel.app`.
+After the first deployment, verify the homepage, `/docs`, and `/blog` routes. Add the Vercel production URL to any social metadata or creator links if the canonical domain changes from `droptogit.vercel.app`.
 
 ## Security notes
 

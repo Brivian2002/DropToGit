@@ -29,7 +29,7 @@ export function Footer() {
               <Logo size="sm" />
             </Link>
             <p className="mt-5 text-sm leading-7 text-muted-foreground">
-              A focused, browser-first way to move a project from your computer or z.ai session into a clean GitHub commit.
+              A focused, browser-first way to move a project from your computer into a clean GitHub commit.
             </p>
             <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary">
               <ShieldCheck className="h-3.5 w-3.5" />

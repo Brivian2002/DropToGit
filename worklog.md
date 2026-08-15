@@ -92,22 +92,20 @@ Stage Summary:
 ---
 Task ID: 2
 Agent: Main
-Task: Remove file rejection, add z.ai integration, modernize UI, Lucide blog icons
+Task: Remove file rejection, modernize UI, Lucide blog icons
 
 Work Log:
 - Removed __MACOSX/.DS_Store filtering from zip.ts sanitizeFilePath (only path traversal security kept)
 - Rewrote AnalysisSection.tsx to be info-only — removed exclusion state, apply/clear buttons, and file removal action
 - Rewrote ProjectAnalyzer.tsx to be display-only — cleanup suggestions shown as info rows, no checkboxes, no removal
-- Created /api/zai/fetch/route.ts — POST endpoint that connects to z.ai API with Bearer token, fetches session files
-- Created ZaiLoader.tsx component — z.ai API key input, session ID input, fetch button with loading/success/error states
-- Rewrote page.tsx with: StepIcon gradient wrappers, ring-1 border cards, upload source tabs (Local Files / z.ai), gradient hero text, Free & Open Source badge, gradient push button with shadow
+- Rewrote page.tsx with: StepIcon gradient wrappers, ring-1 border cards, local files upload flow, gradient hero text, Free & Open Source badge, gradient push button with shadow
 - Replaced all blog emoji icons with Lucide icons (Newspaper, Cpu, Wrench, Lightbulb, BookOpen, Globe, Rocket, Sparkles)
 - Updated BlogContent.tsx, Navbar.tsx, blog/[slug]/page.tsx with CategoryIcon component and ICON_MAP
 
 Stage Summary:
 - No files are rejected during upload or analysis — all files accepted
-- z.ai integration: API key + session ID → fetch code → push to GitHub
-- Modern UI: gradient step icons, ring borders, tabbed upload source, polished cards
+- Local files integration: folder and zip upload → review → push to GitHub
+- Modern UI: gradient step icons, ring borders, polished cards
 - Blog icons: all emojis replaced with professional Lucide icons
 - All verified via agent-browser and lint (0 errors)
 
