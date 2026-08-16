@@ -113,14 +113,18 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* Body */}
         <div
-          className="blog-content prose prose-sm max-w-none
+          className="min-w-0 max-w-full overflow-x-hidden"
+        >
+          <div
+            className="blog-content prose prose-sm min-w-0 max-w-none
             prose-headings:font-semibold prose-headings:tracking-tight
             prose-p:leading-relaxed prose-a:no-underline hover:prose-a:underline
             prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
             prose-pre:border prose-pre:rounded-lg prose-img:rounded-lg prose-img:my-4
             prose-blockquote:border-l-primary"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        </div>
 
         {/* Footer */}
         <Card className="bg-muted/30">

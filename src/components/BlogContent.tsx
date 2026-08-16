@@ -135,9 +135,14 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
               {formatDate(post.published)}
             </span>
           </div>
-          <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+          <Link
+            href={`/blog/${post.slug}`}
+            onClick={(event) => event.stopPropagation()}
+            className="text-xs text-primary font-medium sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+            aria-label={`Read ${post.title}`}
+          >
             Read →
-          </span>
+          </Link>
         </div>
 
         {post.labels && post.labels.length > 0 && (
@@ -203,7 +208,7 @@ function PostReader({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="relative mx-auto h-[min(94vh,960px)] w-full max-w-4xl overflow-hidden rounded-t-2xl p-0 flex flex-col gap-0"
+        className="relative mx-auto flex min-h-0 h-[min(94vh,960px)] w-full max-w-4xl flex-col gap-0 overflow-hidden rounded-t-2xl p-0"
       >
         {post ? (
           <>
@@ -277,10 +282,10 @@ function PostReader({
             </div>
 
             {/* Post body: a real viewport-sized reader with vertical and horizontal overflow handled safely. */}
-            <div className="relative min-h-0 flex-1">
+            <div className="relative min-h-0 flex-1 overflow-hidden">
               <div
                 id="blog-reader-scroll"
-                className="h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-5 sm:px-6 scrollbar-thin"
+                className="h-full min-h-0 max-h-full touch-pan-y overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-5 sm:px-6 scrollbar-thin"
                 tabIndex={0}
                 aria-label="Blog post reader"
               >
@@ -294,7 +299,7 @@ function PostReader({
                   dangerouslySetInnerHTML={{ __html: post.content }}
                 />
               </div>
-              <ScrollControls targetId="blog-reader-scroll" />
+              <ScrollControls targetId="blog-reader-scroll" active={open && !!post} />
             </div>
 
             {/* Bottom action bar */}

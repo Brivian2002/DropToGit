@@ -6,35 +6,67 @@ import { cn } from '@/lib/utils';
 
 interface ScrollControlsProps {
   targetId: string;
+  active?: boolean;
   className?: string;
 }
 
-export function ScrollControls({ targetId, className }: ScrollControlsProps) {
+export function ScrollControls({ targetId, active = true, className }: ScrollControlsProps) {
   const [canScroll, setCanScroll] = useState(false);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
   useEffect(() => {
-    const target = document.getElementById(targetId);
-    if (!target) return;
+    if (!active) {
+      const resetFrame = window.requestAnimationFrame(() => {
+        setCanScroll(false);
+        setCanScrollUp(false);
+        setCanScrollDown(false);
+      });
+      return () => window.cancelAnimationFrame(resetFrame);
+    }
+
+    let frame = 0;
+    let target: HTMLElement | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let mutationObserver: MutationObserver | null = null;
 
     const update = () => {
-      const maxScroll = target.scrollHeight - target.clientHeight;
+      if (!target) return;
+      const maxScroll = Math.max(0, target.scrollHeight - target.clientHeight);
       setCanScroll(maxScroll > 8);
       setCanScrollUp(target.scrollTop > 8);
       setCanScrollDown(target.scrollTop < maxScroll - 8);
     };
 
-    update();
-    target.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    return () => {
-      target.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-    };
-  }, [targetId]);
+    const attach = () => {
+      target = document.getElementById(targetId);
+      if (!target) {
+        frame = window.requestAnimationFrame(attach);
+        return;
+      }
 
-  if (!canScroll) return null;
+      update();
+      target.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('resize', update);
+      resizeObserver = new ResizeObserver(update);
+      resizeObserver.observe(target);
+      if (target.firstElementChild) resizeObserver.observe(target.firstElementChild);
+      mutationObserver = new MutationObserver(update);
+      mutationObserver.observe(target, { childList: true, subtree: true, characterData: true });
+    };
+
+    attach();
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      target?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+    };
+  }, [active, targetId]);
+
+  if (!active || !canScroll) return null;
 
   const target = () => document.getElementById(targetId);
   const scrollBy = (amount: number) => target()?.scrollBy({ top: amount, behavior: 'smooth' });
