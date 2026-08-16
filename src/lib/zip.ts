@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { compareProjectPaths } from './diff';
 
 export interface ProjectFile {
   path: string;
@@ -25,7 +26,7 @@ function sanitizeFilePath(path: string): string {
 }
 
 export function sortProjectFiles(files: ProjectFile[]): ProjectFile[] {
-  return [...files].sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+  return [...files].sort((a, b) => compareProjectPaths(a.path, b.path));
 }
 
 export function stripCommonRoot(files: ProjectFile[]): ProjectFile[] {

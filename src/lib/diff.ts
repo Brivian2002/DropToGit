@@ -63,6 +63,21 @@ export function computeDiff(
   return { newFiles, changedFiles, unchangedFiles, deletedFiles };
 }
 
+const pathCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+export function compareProjectPaths(a: string, b: string): number {
+  const aParts = a.split('/');
+  const bParts = b.split('/');
+  const length = Math.min(aParts.length, bParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const comparison = pathCollator.compare(aParts[index], bParts[index]);
+    if (comparison !== 0) return comparison;
+  }
+
+  return aParts.length - bParts.length;
+}
+
 // Build a nested tree structure from file paths
 export interface TreeNode {
   name: string;
@@ -82,7 +97,7 @@ export function buildFileTree(
     children: [],
   };
 
-  const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path));
+  const sortedFiles = [...files].sort((a, b) => compareProjectPaths(a.path, b.path));
 
   for (const file of sortedFiles) {
     const parts = file.path.split('/');
@@ -113,7 +128,7 @@ export function buildFileTree(
   const sortChildren = (node: TreeNode) => {
     node.children.sort((a, b) => {
       if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-      return a.name.localeCompare(b.name);
+      return pathCollator.compare(a.name, b.name);
     });
     node.children.forEach(sortChildren);
   };

@@ -11,6 +11,7 @@ import {
   sanitizePath,
   type GitHubTreeEntry,
 } from '@/lib/github';
+import { compareProjectPaths } from '@/lib/diff';
 
 export const maxDuration = 300;
 
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
   }
 
   const fileEntries: FileEntry[] = [...files].sort((a: FileEntry, b: FileEntry) =>
-    a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }),
+    compareProjectPaths(a.path, b.path),
   );
 
   // Validate mode
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 6. Create tree in deterministic path order.
-        treeItems.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+        treeItems.sort((a, b) => compareProjectPaths(a.path, b.path));
         await notifyProgress(controller, 'Creating Git objects', 0, 1, 'Creating tree object...');
 
         // GitHub API has a limit of 100K entries per tree, but we'll batch if needed

@@ -21,7 +21,7 @@ function computeDefaultExpanded(files: ProjectFile[]): Set<string> {
   const dirs = new Set<string>();
   for (const file of files) {
     const parts = file.path.split('/');
-    for (let i = 1; i <= Math.min(2, parts.length - 1); i += 1) {
+    for (let i = 1; i <= parts.length - 1; i += 1) {
       dirs.add(parts.slice(0, i).join('/'));
     }
   }
@@ -68,6 +68,8 @@ export function FileTreePreview({ files, diffInfo, onFileClick }: FileTreePrevie
           <span>{files.length} files approved</span>
           <span>·</span>
           <span>{folderCount} folders</span>
+          <span>·</span>
+          <span className="text-primary/80">folders first · ordered paths</span>
           <span>·</span>
           <span>{formatFileSize(totalSize)}</span>
         </div>

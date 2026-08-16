@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import {
   type BloggerPost,
   type BlogCategory,
@@ -202,8 +203,8 @@ function PostReader({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        side="right"
-        className="w-full sm:max-w-[540px] md:max-w-[640px] lg:max-w-[700px] p-0 flex flex-col gap-0"
+        side="bottom"
+        className="mx-auto h-[92vh] w-full max-w-5xl rounded-t-2xl p-0 flex flex-col gap-0"
       >
         {post ? (
           <>
@@ -225,7 +226,7 @@ function PostReader({
             </div>
 
             {/* Post header */}
-            <div className="px-6 pt-4 pb-0 space-y-3 shrink-0">
+            <div className="mx-auto w-full max-w-3xl px-6 pt-4 pb-0 space-y-3 shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <Badge variant="secondary" className="text-xs">
                   <CategoryIcon name={cat?.icon || ''} className="mr-1.5 h-3 w-3" />
@@ -277,18 +278,14 @@ function PostReader({
             </div>
 
             {/* Post body */}
-            <ScrollArea className="flex-1 px-6 py-4">
+            <ScrollArea id="blog-reader-scroll" className="flex-1 px-6 py-4">
               <article
-                className="prose prose-sm dark:prose-invert max-w-none
+                className="blog-content prose prose-sm mx-auto w-full max-w-3xl
                   prose-headings:font-semibold prose-headings:tracking-tight
-                  prose-p:text-muted-foreground prose-p:leading-relaxed
-                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                  prose-code:font-mono prose-code:text-sm prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                  prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg
-                  prose-img:rounded-lg prose-img:my-4
-                  prose-li:text-muted-foreground
-                  prose-strong:text-foreground
-                  prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground"
+                  prose-p:leading-relaxed prose-a:no-underline hover:prose-a:underline
+                  prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                  prose-pre:border prose-pre:rounded-lg prose-img:rounded-lg prose-img:my-4
+                  prose-blockquote:border-l-primary"
                 dangerouslySetInnerHTML={{ __html: post.content }}
               />
             </ScrollArea>
@@ -305,6 +302,7 @@ function PostReader({
                 View on Blogger
               </a>
             </div>
+            <ScrollToTopButton targetId="blog-reader-scroll" />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">

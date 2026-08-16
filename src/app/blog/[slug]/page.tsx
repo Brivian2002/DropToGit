@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollToTopButton } from '@/components/ScrollToTopButton';
 import { fetchBlogPost, formatDate, getCategoryByKey } from '@/lib/blogger';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -51,7 +51,8 @@ export default async function BlogPostPage({ params }: Props) {
   const cat = getCategoryByKey(post.category);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8">
+      <div className="mx-auto w-full max-w-4xl space-y-6">
       <Link
         href="/blog"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -60,7 +61,7 @@ export default async function BlogPostPage({ params }: Props) {
         Back to Blog
       </Link>
 
-      <article className="space-y-5">
+      <article className="mx-auto w-full max-w-3xl space-y-5">
         {/* Featured image */}
         {post.featuredImage ? (
           <div className="rounded-xl overflow-hidden border">
@@ -112,16 +113,12 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* Body */}
         <div
-          className="prose prose-sm dark:prose-invert max-w-none
+          className="blog-content prose prose-sm max-w-none
             prose-headings:font-semibold prose-headings:tracking-tight
-            prose-p:text-muted-foreground prose-p:leading-relaxed
-            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-            prose-code:font-mono prose-code:text-sm prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-            prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg
-            prose-img:rounded-lg prose-img:my-4
-            prose-li:text-muted-foreground
-            prose-strong:text-foreground
-            prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground"
+            prose-p:leading-relaxed prose-a:no-underline hover:prose-a:underline
+            prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+            prose-pre:border prose-pre:rounded-lg prose-img:rounded-lg prose-img:my-4
+            prose-blockquote:border-l-primary"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
@@ -146,6 +143,8 @@ export default async function BlogPostPage({ params }: Props) {
           </CardContent>
         </Card>
       </article>
+      </div>
+      <ScrollToTopButton />
     </div>
   );
 }

@@ -188,3 +188,44 @@
     }
   }
 }
+
+@layer utilities {
+  .blog-content {
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.85;
+  }
+
+  .blog-content :where(*) {
+    font-family: inherit !important;
+  }
+
+  .blog-content :where(p, span, div, li, blockquote, td, th, figcaption) {
+    color: var(--foreground) !important;
+  }
+
+  .blog-content :where(h1, h2, h3, h4, h5, h6, strong, b) {
+    color: var(--foreground) !important;
+  }
+
+  .blog-content :where(a) {
+    color: var(--primary) !important;
+  }
+
+  .blog-content :where(code, pre) {
+    color: var(--foreground) !important;
+    background-color: var(--muted) !important;
+  }
+
+  .blog-content :where(img, video, iframe) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .blog-content :where(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
