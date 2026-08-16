@@ -258,78 +258,19 @@ export default function Home() {
     <div className="relative overflow-hidden">
       <div className="site-grid pointer-events-none absolute inset-x-0 top-0 h-[34rem] opacity-70" />
       <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-16">
-        <section className="grid items-end gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" />
-              A calmer way to ship
+        <section className="mb-6 rounded-2xl border border-primary/20 bg-primary/[0.045] px-5 py-4 sm:px-6">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div>
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">GitHub delivery tool</p>
+              <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">Ship your project first.</h1>
             </div>
-            <h1 className="text-balance max-w-2xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
-              From project folder to <span className="bg-gradient-to-r from-primary via-primary to-sky-accent bg-clip-text text-transparent">GitHub.</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
-              DropToGit turns a local project folder into a clean GitHub commit. No terminal choreography, no local setup, and no credential storage.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-2"><TerminalSquare className="h-3.5 w-3.5 text-primary" />No CLI required</span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-2"><ShieldCheck className="h-3.5 w-3.5 text-sky-accent" />Token stays in session</span>
-            </div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.08, duration: 0.35 }} className="surface-glow relative overflow-hidden rounded-[1.5rem] border border-border/80 bg-card/72 p-5 sm:p-6">
-            <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between border-b border-border/70 pb-4">
-                <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Github className="h-4 w-4" /></div><div><p className="text-sm font-semibold">Project delivery</p><p className="font-mono text-[10px] text-muted-foreground">droptogit / workspace</p></div></div>
-                <Badge variant="secondary" className="gap-1.5 rounded-full text-[10px]"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Ready</Badge>
-              </div>
-              <div className="space-y-3 py-5">
-                {[
-                  { icon: KeyRound, title: 'Connect securely', copy: 'Use a fine-grained GitHub token' },
-                  { icon: Upload, title: 'Add your project', copy: 'Drop a folder, zip, or browse your files' },
-                  { icon: GitBranch, title: 'Create a clean commit', copy: 'Choose the branch and push' },
-                ].map((item, index) => {
-                  const Icon = item.icon;
-                  return <div key={item.title} className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/45 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Icon className="h-4 w-4" /></div><div className="min-w-0 flex-1"><p className="text-sm font-medium">{item.title}</p><p className="truncate text-xs text-muted-foreground">{item.copy}</p></div><span className="font-mono text-[10px] text-muted-foreground">0{index + 1}</span></div>;
-                })}
-              </div>
-              <div className="flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs text-muted-foreground">Built for focused shipping</span><ArrowRight className="h-4 w-4 text-primary" /></div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section className="mt-12 grid gap-6 rounded-2xl border border-border/70 bg-card/45 p-6 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-          <div className="space-y-4">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">What DropToGit is for</p>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">A clear bridge between local work and GitHub.</h2>
-            <div className="space-y-3 text-sm leading-6 text-muted-foreground sm:text-base">
-              <p>
-                DropToGit is for the moment when a project already exists on your computer, but getting it into version control feels like a separate technical task. It is useful for prototypes, coursework, generated websites, documentation, experiments, and collaborators who need to deliver a complete folder without setting up a full Git environment first.
-              </p>
-              <p>
-                Manual cloning is the right choice when you need a long-running local development workflow, branches, rebases, hooks, or detailed history inspection. DropToGit serves a narrower purpose: connect a repository, bring in a project folder, see the normalized tree, choose how the repository should change, and create one deliberate commit with the important details visible before you push.
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-3 text-sm">
-            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
-              <p className="font-semibold text-foreground">For builders moving quickly</p>
-              <p className="mt-1 leading-6 text-muted-foreground">Skip repetitive setup when the deliverable is already prepared and the next step is a clean repository snapshot.</p>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
-              <p className="font-semibold text-foreground">For learners and collaborators</p>
-              <p className="mt-1 leading-6 text-muted-foreground">See the branch, folders, files, mode, and commit message in plain language before the change reaches GitHub.</p>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
-              <p className="font-semibold text-foreground">For focused delivery</p>
-              <p className="mt-1 leading-6 text-muted-foreground">Keep the browser as the handoff point while GitHub remains the source of truth for the repository.</p>
-            </div>
+            <p className="max-w-xl text-sm leading-6 text-muted-foreground">Connect a repository, add your project folder, review the tree, and push a clean commit.</p>
           </div>
         </section>
 
-        <div className="mt-12"><WorkflowRail tokenReady={canShowRepos} repoReady={canShowUpload} filesReady={canShowConfigure} success={store.stage === 'success'} /></div>
+        <div className="mt-0"><WorkflowRail tokenReady={canShowRepos} repoReady={canShowUpload} filesReady={canShowConfigure} success={store.stage === 'success'} /></div>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+        <section className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
           <div className="space-y-6">
             <AnimatePresence mode="popLayout">
               <motion.section {...fadeUp} layout>
@@ -399,6 +340,76 @@ export default function Home() {
             <TrustStrip />
           </aside>
         </section>
+
+        <section className="grid items-end gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+              <Sparkles className="h-3.5 w-3.5" />
+              A calmer way to ship
+            </div>
+            <h1 className="text-balance max-w-2xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+              From project folder to <span className="bg-gradient-to-r from-primary via-primary to-sky-accent bg-clip-text text-transparent">GitHub.</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+              DropToGit turns a local project folder into a clean GitHub commit. No terminal choreography, no local setup, and no credential storage.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-2"><TerminalSquare className="h-3.5 w-3.5 text-primary" />No CLI required</span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/60 px-3 py-2"><ShieldCheck className="h-3.5 w-3.5 text-sky-accent" />Token stays in session</span>
+            </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.08, duration: 0.35 }} className="surface-glow relative overflow-hidden rounded-[1.5rem] border border-border/80 bg-card/72 p-5 sm:p-6">
+            <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
+            <div className="relative">
+              <div className="flex items-center justify-between border-b border-border/70 pb-4">
+                <div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><Github className="h-4 w-4" /></div><div><p className="text-sm font-semibold">Project delivery</p><p className="font-mono text-[10px] text-muted-foreground">droptogit / workspace</p></div></div>
+                <Badge variant="secondary" className="gap-1.5 rounded-full text-[10px]"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Ready</Badge>
+              </div>
+              <div className="space-y-3 py-5">
+                {[
+                  { icon: KeyRound, title: 'Connect securely', copy: 'Use a fine-grained GitHub token' },
+                  { icon: Upload, title: 'Add your project', copy: 'Drop a folder, zip, or browse your files' },
+                  { icon: GitBranch, title: 'Create a clean commit', copy: 'Choose the branch and push' },
+                ].map((item, index) => {
+                  const Icon = item.icon;
+                  return <div key={item.title} className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/45 p-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Icon className="h-4 w-4" /></div><div className="min-w-0 flex-1"><p className="text-sm font-medium">{item.title}</p><p className="truncate text-xs text-muted-foreground">{item.copy}</p></div><span className="font-mono text-[10px] text-muted-foreground">0{index + 1}</span></div>;
+                })}
+              </div>
+              <div className="flex items-center justify-between border-t border-border/70 pt-4"><span className="text-xs text-muted-foreground">Built for focused shipping</span><ArrowRight className="h-4 w-4 text-primary" /></div>
+            </div>
+          </motion.div>
+        </section>
+
+        <section className="mt-8 grid gap-6 rounded-2xl border border-border/70 bg-card/45 p-6 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+          <div className="space-y-4">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">What DropToGit is for</p>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">A clear bridge between local work and GitHub.</h2>
+            <div className="space-y-3 text-sm leading-6 text-muted-foreground sm:text-base">
+              <p>
+                DropToGit is for the moment when a project already exists on your computer, but getting it into version control feels like a separate technical task. It is useful for prototypes, coursework, generated websites, documentation, experiments, and collaborators who need to deliver a complete folder without setting up a full Git environment first.
+              </p>
+              <p>
+                Manual cloning is the right choice when you need a long-running local development workflow, branches, rebases, hooks, or detailed history inspection. DropToGit serves a narrower purpose: connect a repository, bring in a project folder, see the normalized tree, choose how the repository should change, and create one deliberate commit with the important details visible before you push.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 text-sm">
+            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+              <p className="font-semibold text-foreground">For builders moving quickly</p>
+              <p className="mt-1 leading-6 text-muted-foreground">Skip repetitive setup when the deliverable is already prepared and the next step is a clean repository snapshot.</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+              <p className="font-semibold text-foreground">For learners and collaborators</p>
+              <p className="mt-1 leading-6 text-muted-foreground">See the branch, folders, files, mode, and commit message in plain language before the change reaches GitHub.</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+              <p className="font-semibold text-foreground">For focused delivery</p>
+              <p className="mt-1 leading-6 text-muted-foreground">Keep the browser as the handoff point while GitHub remains the source of truth for the repository.</p>
+            </div>
+          </div>
+        </section>
+
       </div>
 
       <FilePreview file={store.previewFile} open={!!store.previewFile} onOpenChange={(open) => { if (!open) store.setPreviewFile(null); }} />
