@@ -173,7 +173,10 @@ export default function Home() {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: 'Push failed' }));
-        throw new Error(data.error || `Push failed (${response.status})`);
+        const message = data.error || `Push failed (${response.status})`;
+        store.setStage('configure');
+        store.setPushError(message);
+        throw new Error(message);
       }
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -207,6 +210,10 @@ export default function Home() {
               store.setStage('success');
               toast.success('Project pushed to GitHub');
             } else if (event.type === 'error') {
+              // The API reports failures over the same SSE stream. Leave the
+              // pushing state so the user can correct the issue and retry
+              // without selecting the project again.
+              store.setStage('configure');
               store.setPushError(event.error);
               toast.error(event.error);
             }
@@ -216,8 +223,12 @@ export default function Home() {
         }
       }
     } catch (error) {
-      if ((error as Error).name === 'AbortError') return;
+      if ((error as Error).name === 'AbortError') {
+        store.setStage('configure');
+        return;
+      }
       const message = error instanceof Error ? error.message : 'An unexpected error occurred';
+      store.setStage('configure');
       store.setPushError(message);
       toast.error(message);
     }
