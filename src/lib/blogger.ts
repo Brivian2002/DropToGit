@@ -178,15 +178,20 @@ function escapeRegExp(value: string): string {
 }
 
 export function removeLeadingPostTitle(html: string, title: string): string {
-  const readable = stripHtml(html);
   const normalizedTitle = title.trim();
-  if (!normalizedTitle || !readable.toLowerCase().startsWith(normalizedTitle.toLowerCase())) return html;
+  if (!normalizedTitle) return html;
+
+  const readable = stripHtml(html).toLowerCase();
+  const titleIndex = readable.indexOf(normalizedTitle.toLowerCase());
+  if (titleIndex < 0 || titleIndex > 400) return html;
 
   const titlePattern = normalizedTitle
     .split(/\s+/)
     .map(escapeRegExp)
-    .join('(?:\\s|&nbsp;|<[^>]*>)*');
-  return html.replace(new RegExp(`^(?:\\s|&nbsp;|&#160;|<[^>]*>)*?${titlePattern}`, 'i'), '');
+    .join('(?:\\s|&nbsp;|&#160;|<[^>]*>)*');
+  const match = new RegExp(titlePattern, 'i').exec(html.slice(0, 3000));
+  if (!match || match.index === undefined) return html;
+  return html.slice(0, match.index) + html.slice(match.index + match[0].length);
 }
 
 export function extractSlug(url: string): string {
@@ -387,11 +392,22 @@ export async function fetchBlogPostById(postId: string): Promise<BloggerPost | n
 }
 
 export function getPostExcerpt(content: string, maxLength = 200, title?: string): string {
-  const text = stripHtml(removeLeadingPostTitle(content, title || ''))
+  const normalizedTitle = title?.trim() || '';
+  let text = stripHtml(removeLeadingPostTitle(content, normalizedTitle))
     .replace(/([a-z])Subtitle:/gi, '$1. Subtitle: ')
     .replace(/^subtitle:\s*/i, '')
     .replace(/\s+/g, ' ')
     .trim();
+
+  if (normalizedTitle) {
+    const duplicateIndex = text.toLowerCase().indexOf(normalizedTitle.toLowerCase());
+    if (duplicateIndex >= 0 && duplicateIndex < 400) {
+      text = `${text.slice(0, duplicateIndex)} ${text.slice(duplicateIndex + normalizedTitle.length)}`
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).replace(/\s+\S*$/, '') + '…';
 }
