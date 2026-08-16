@@ -128,7 +128,9 @@ export function parseFileList(fileList: FileList | File[]): ZipResult {
     files.push({ path: sanitized, content: new Uint8Array(0), size, _file: file } as ProjectFile & { _file: File });
   }
 
-  return { files: sortProjectFiles(files), totalSize, errors };
+  // Keep the uploaded project contents at the repository root, matching a
+  // terminal push from inside the selected project directory.
+  return { files: stripCommonRoot(files), totalSize, errors };
 }
 
 // Async version for folder uploads - reads file content

@@ -22,7 +22,6 @@ export function Logo({ size = 'md', showText = true }: LogoProps) {
         width={48}
         height={48}
         sizes={styles.sizes}
-        priority
         className={`${styles.mark} shrink-0 object-contain`}
         aria-hidden="true"
       />
