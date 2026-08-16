@@ -1,6 +1,6 @@
+import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Mail, Phone, Linkedin, Globe } from 'lucide-react';
 
 export const metadata = { title: 'About the Creator' };
@@ -11,10 +11,16 @@ export default function AboutMePage() {
       {/* Header with avatar */}
       <section className="space-y-5">
         <div className="flex items-center gap-5">
-          <Avatar className="h-20 w-20 shrink-0 border-2 border-primary/20 shadow-lg shadow-primary/10">
-            <AvatarImage src="/bright-dumashie.png" alt="Bright Dumashie" />
-            <AvatarFallback className="bg-primary text-xl font-bold text-primary-foreground">BD</AvatarFallback>
-          </Avatar>
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-primary/20 bg-muted shadow-lg shadow-primary/10">
+            <Image
+              src="/bright-dumashie.png"
+              alt="Bright Dumashie"
+              fill
+              sizes="80px"
+              className="object-cover"
+              priority
+            />
+          </div>
           <div className="space-y-1">
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
               Bright Dumashie

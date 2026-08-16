@@ -186,7 +186,7 @@ export function removeLeadingPostTitle(html: string, title: string): string {
     .split(/\s+/)
     .map(escapeRegExp)
     .join('(?:\\s|&nbsp;|<[^>]*>)*');
-  return html.replace(new RegExp(`^(?:\\s|<[^>]*>)*?${titlePattern}`, 'i'), '');
+  return html.replace(new RegExp(`^(?:\\s|&nbsp;|&#160;|<[^>]*>)*?${titlePattern}`, 'i'), '');
 }
 
 export function extractSlug(url: string): string {
