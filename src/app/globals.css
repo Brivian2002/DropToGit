@@ -229,3 +229,31 @@
     overflow-x: auto;
   }
 }
+
+@layer utilities {
+  .blog-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .blog-content :where(p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote) {
+    max-width: 100% !important;
+  }
+
+  .blog-content :where(pre) {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: pre;
+  }
+
+  .blog-content :where(table) {
+    width: max-content !important;
+    min-width: 100%;
+  }
+
+  .blog-content :where(iframe) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}

@@ -16,8 +16,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ScrollToTopButton } from '@/components/ScrollToTopButton';
+import { ScrollControls } from '@/components/ScrollControls';
 import {
   type BloggerPost,
   type BlogCategory,
@@ -204,12 +203,12 @@ function PostReader({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="mx-auto h-[92vh] w-full max-w-5xl rounded-t-2xl p-0 flex flex-col gap-0"
+        className="relative mx-auto h-[min(94vh,960px)] w-full max-w-4xl overflow-hidden rounded-t-2xl p-0 flex flex-col gap-0"
       >
         {post ? (
           <>
             {/* Hero image */}
-            <div className="relative w-full max-h-[300px] sm:max-h-[360px] bg-muted overflow-hidden shrink-0">
+            <div className="relative w-full max-h-[180px] sm:max-h-[260px] bg-muted overflow-hidden shrink-0">
               {post.featuredImage ? (
                 <img
                   src={post.featuredImage}
@@ -226,7 +225,7 @@ function PostReader({
             </div>
 
             {/* Post header */}
-            <div className="mx-auto w-full max-w-3xl px-6 pt-4 pb-0 space-y-3 shrink-0">
+            <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4 pb-0 space-y-3 shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <Badge variant="secondary" className="text-xs">
                   <CategoryIcon name={cat?.icon || ''} className="mr-1.5 h-3 w-3" />
@@ -277,18 +276,26 @@ function PostReader({
               )}
             </div>
 
-            {/* Post body */}
-            <ScrollArea id="blog-reader-scroll" className="flex-1 px-6 py-4">
-              <article
-                className="blog-content prose prose-sm mx-auto w-full max-w-3xl
-                  prose-headings:font-semibold prose-headings:tracking-tight
-                  prose-p:leading-relaxed prose-a:no-underline hover:prose-a:underline
-                  prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                  prose-pre:border prose-pre:rounded-lg prose-img:rounded-lg prose-img:my-4
-                  prose-blockquote:border-l-primary"
-                dangerouslySetInnerHTML={{ __html: post.content }}
-              />
-            </ScrollArea>
+            {/* Post body: a real viewport-sized reader with vertical and horizontal overflow handled safely. */}
+            <div className="relative min-h-0 flex-1">
+              <div
+                id="blog-reader-scroll"
+                className="h-full min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-5 sm:px-6 scrollbar-thin"
+                tabIndex={0}
+                aria-label="Blog post reader"
+              >
+                <article
+                  className="blog-content prose prose-sm mx-auto w-full max-w-[44rem] min-w-0
+                    prose-headings:font-semibold prose-headings:tracking-tight
+                    prose-p:leading-relaxed prose-a:no-underline hover:prose-a:underline
+                    prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                    prose-pre:my-4 prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:border prose-pre:rounded-lg
+                    prose-img:my-4 prose-img:max-w-full prose-blockquote:border-l-primary"
+                  dangerouslySetInnerHTML={{ __html: post.content }}
+                />
+              </div>
+              <ScrollControls targetId="blog-reader-scroll" />
+            </div>
 
             {/* Bottom action bar */}
             <div className="px-6 py-4 border-t bg-muted/30 shrink-0">
@@ -302,7 +309,6 @@ function PostReader({
                 View on Blogger
               </a>
             </div>
-            <ScrollToTopButton targetId="blog-reader-scroll" />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
