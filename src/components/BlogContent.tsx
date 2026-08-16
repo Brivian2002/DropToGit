@@ -25,6 +25,7 @@ import {
   BLOG_LABELS,
   labelToKey,
   getPostExcerpt,
+  removeLeadingPostTitle,
   formatDate,
   getCategoryByKey,
 } from '@/lib/blogger';
@@ -125,7 +126,7 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
         </h3>
 
         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-          {getPostExcerpt(post.content, 140)}
+          {getPostExcerpt(post.content, 140, post.title)}
         </p>
 
         <div className="flex items-center justify-between pt-1">
@@ -296,7 +297,7 @@ function PostReader({
                     prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
                     prose-pre:my-4 prose-pre:max-w-full prose-pre:overflow-x-auto prose-pre:border prose-pre:rounded-lg
                     prose-img:my-4 prose-img:max-w-full prose-blockquote:border-l-primary"
-                  dangerouslySetInnerHTML={{ __html: post.content }}
+                  dangerouslySetInnerHTML={{ __html: removeLeadingPostTitle(post.content, post.title) }}
                 />
               </div>
               <ScrollControls targetId="blog-reader-scroll" active={open && !!post} />

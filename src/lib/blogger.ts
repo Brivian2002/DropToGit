@@ -149,8 +149,44 @@ type BlogListResult = {
 
 const BLOG_REVALIDATE_SECONDS = 60;
 
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(x?)([0-9a-f]+);/gi, (_match, hex, value) => {
+      const codePoint = Number.parseInt(value, hex ? 16 : 10);
+      return Number.isNaN(codePoint) ? '' : String.fromCodePoint(codePoint);
+    });
+}
+
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').trim();
+  return decodeHtmlEntities(
+    html
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(?:p|div|h[1-6]|li|blockquote|pre|tr|td|th|section|article|ul|ol)[^>]*>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' '),
+  ).trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function removeLeadingPostTitle(html: string, title: string): string {
+  const readable = stripHtml(html);
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle || !readable.toLowerCase().startsWith(normalizedTitle.toLowerCase())) return html;
+
+  const titlePattern = normalizedTitle
+    .split(/\s+/)
+    .map(escapeRegExp)
+    .join('(?:\\s|&nbsp;|<[^>]*>)*');
+  return html.replace(new RegExp(`^(?:\\s|<[^>]*>)*?${titlePattern}`, 'i'), '');
 }
 
 export function extractSlug(url: string): string {
@@ -350,8 +386,12 @@ export async function fetchBlogPostById(postId: string): Promise<BloggerPost | n
   return posts.find((post) => post.id === postId) || null;
 }
 
-export function getPostExcerpt(content: string, maxLength = 200): string {
-  const text = stripHtml(content);
+export function getPostExcerpt(content: string, maxLength = 200, title?: string): string {
+  const text = stripHtml(removeLeadingPostTitle(content, title || ''))
+    .replace(/([a-z])Subtitle:/gi, '$1. Subtitle: ')
+    .replace(/^subtitle:\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).replace(/\s+\S*$/, '') + '…';
 }

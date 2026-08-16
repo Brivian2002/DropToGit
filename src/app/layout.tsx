@@ -44,9 +44,8 @@ export const metadata: Metadata = {
     icon: [
       { url: "/favicon.ico", type: "image/x-icon" },
       { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/logo.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: [{ url: "/logo.png", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
   openGraph: {
     title: "DropToGit — Ship projects to GitHub without the terminal",

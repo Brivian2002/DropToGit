@@ -9,7 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
-import { fetchBlogPost, formatDate, getCategoryByKey } from '@/lib/blogger';
+import { fetchBlogPost, formatDate, getCategoryByKey, removeLeadingPostTitle } from '@/lib/blogger';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   'layout-grid': LayoutGrid,
@@ -122,7 +122,7 @@ export default async function BlogPostPage({ params }: Props) {
             prose-code:font-mono prose-code:text-sm prose-code:px-1 prose-code:py-0.5 prose-code:rounded
             prose-pre:border prose-pre:rounded-lg prose-img:rounded-lg prose-img:my-4
             prose-blockquote:border-l-primary"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{ __html: removeLeadingPostTitle(post.content, post.title) }}
           />
         </div>
 
