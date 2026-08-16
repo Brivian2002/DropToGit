@@ -138,15 +138,14 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
               {formatDate(post.published)}
             </span>
           </div>
-          <Link
+          <a
             href={`/blog/${post.slug}`}
             onClick={(event) => event.stopPropagation()}
-            prefetch={false}
             className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={`Read ${post.title}`}
           >
             Read →
-          </Link>
+          </a>
         </div>
 
         {post.labels && post.labels.length > 0 && (

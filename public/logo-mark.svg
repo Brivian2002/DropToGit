@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">DropToGit logo mark</title>
+  <desc id="desc">A water drop flowing into connected repository nodes.</desc>
+  <defs>
+    <linearGradient id="drop" x1="18" y1="18" x2="92" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b3157"/>
+      <stop offset="1" stop-color="#071d38"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="30" y1="38" x2="112" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42f58d"/>
+      <stop offset="1" stop-color="#20d8bf"/>
+    </linearGradient>
+  </defs>
+  <path d="M43 12C30 29 18 43 18 64a25 25 0 0 0 50 0c0-21-12-35-25-52Z" fill="url(#drop)" stroke="#42f58d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M43 31v33c0 9 7 16 16 16h31" fill="none" stroke="url(#flow)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m78 68 12 12-12 12" fill="none" stroke="#20d8bf" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M91 80h20" stroke="#20d8bf" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="111" cy="80" r="10" fill="#071d38" stroke="#20d8bf" stroke-width="4"/>
+  <path d="M111 80 111 104" stroke="#20d8bf" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="111" cy="104" r="9" fill="#071d38" stroke="#42f58d" stroke-width="4"/>
+</svg>

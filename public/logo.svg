@@ -1,14 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 96" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 128" role="img" aria-labelledby="title desc">
   <title id="title">DropToGit</title>
-  <desc id="desc">A D-shaped delivery mark followed by the DropToGit wordmark.</desc>
+  <desc id="desc">The official DropToGit logo: a drop flowing into connected repository nodes and the DropToGit wordmark.</desc>
   <defs>
-    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#42f58d"/>
-      <stop offset="1" stop-color="#16c978"/>
+    <linearGradient id="drop" x1="18" y1="12" x2="92" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b3157"/>
+      <stop offset="1" stop-color="#071d38"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="30" y1="38" x2="112" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42f58d"/>
+      <stop offset="1" stop-color="#20d8bf"/>
     </linearGradient>
   </defs>
-  <rect x="4" y="4" width="88" height="88" rx="25" fill="url(#mark)"/>
-  <path d="M27 22h19c17 0 29 11 29 26s-12 26-29 26H27V22Zm17 13h-3v22h3c8 0 14-4 14-11s-6-11-14-11Z" fill="#07110d" fill-rule="evenodd"/>
-  <path d="M58 48h18m-7-7 7 7-7 7" fill="none" stroke="#07110d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="116" y="64" fill="#f5f7f6" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="700" letter-spacing="-2">Drop<tspan fill="#35e98b">To</tspan>Git</text>
+  <g transform="translate(4 4)">
+    <path d="M43 12C30 29 18 43 18 64a25 25 0 0 0 50 0c0-21-12-35-25-52Z" fill="url(#drop)" stroke="#42f58d" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M43 31v33c0 9 7 16 16 16h31" fill="none" stroke="url(#flow)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m78 68 12 12-12 12" fill="none" stroke="#20d8bf" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M91 80h20" stroke="#20d8bf" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="111" cy="80" r="10" fill="#071d38" stroke="#20d8bf" stroke-width="4"/>
+    <path d="M111 80 111 104" stroke="#20d8bf" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="111" cy="104" r="9" fill="#071d38" stroke="#42f58d" stroke-width="4"/>
+  </g>
+  <text x="142" y="78" fill="#f5f7f6" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="700" letter-spacing="-2">Drop<tspan fill="#35e98b">To</tspan>Git</text>
 </svg>
