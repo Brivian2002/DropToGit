@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -9,7 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollToTopButton } from '@/components/ScrollToTopButton';
-import { fetchBlogPost, formatDate, getCategoryByKey, removeLeadingPostTitle } from '@/lib/blogger';
+import { fetchBlogPost, formatDate, getCategoryByKey, getPostExcerpt, removeLeadingPostTitle } from '@/lib/blogger';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   'layout-grid': LayoutGrid,
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: 'Post Not Found' };
   return {
     title: post.title,
-    description: post.content.replace(/<[^>]*>/g, '').slice(0, 160),
+    description: getPostExcerpt(post.content, 160, post.title),
     openGraph: post.featuredImage
       ? { images: [{ url: post.featuredImage }] }
       : undefined,
@@ -64,11 +65,14 @@ export default async function BlogPostPage({ params }: Props) {
       <article className="mx-auto w-full max-w-3xl space-y-5">
         {/* Featured image */}
         {post.featuredImage ? (
-          <div className="rounded-xl overflow-hidden border">
-            <img
+          <div className="relative h-[220px] overflow-hidden rounded-xl border sm:h-[400px]">
+            <Image
               src={post.featuredImage}
               alt={post.title}
-              className="w-full max-h-[400px] object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+              priority
             />
           </div>
         ) : (

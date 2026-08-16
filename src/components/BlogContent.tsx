@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   Calendar, Clock, Tag, X, Loader2, ImageIcon, ExternalLink,
@@ -92,11 +93,12 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
       {/* Image */}
       <div className="relative aspect-video bg-muted overflow-hidden">
         {post.featuredImage ? (
-          <img
+          <Image
             src={post.featuredImage}
             alt={post.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
@@ -139,7 +141,8 @@ function BlogPostCard({ post, onRead }: { post: BloggerPost; onRead: () => void 
           <Link
             href={`/blog/${post.slug}`}
             onClick={(event) => event.stopPropagation()}
-            className="text-xs text-primary font-medium sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:underline focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+            prefetch={false}
+            className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={`Read ${post.title}`}
           >
             Read →
@@ -214,12 +217,14 @@ function PostReader({
         {post ? (
           <>
             {/* Hero image */}
-            <div className="relative w-full max-h-[180px] sm:max-h-[260px] bg-muted overflow-hidden shrink-0">
+            <div className="relative h-[180px] w-full bg-muted overflow-hidden shrink-0 sm:h-[260px]">
               {post.featuredImage ? (
-                <img
+                <Image
                   src={post.featuredImage}
                   alt={post.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 896px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="w-full h-full min-h-[200px] flex flex-col items-center justify-center gap-2 text-muted-foreground/30">
