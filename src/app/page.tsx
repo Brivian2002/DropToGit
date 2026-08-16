@@ -287,6 +287,35 @@ export default function Home() {
           </motion.div>
         </section>
 
+        <section className="mt-12 grid gap-6 rounded-2xl border border-border/70 bg-card/45 p-6 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+          <div className="space-y-4">
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">What DropToGit is for</p>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">A clear bridge between local work and GitHub.</h2>
+            <div className="space-y-3 text-sm leading-6 text-muted-foreground sm:text-base">
+              <p>
+                DropToGit is for the moment when a project already exists on your computer, but getting it into version control feels like a separate technical task. It is useful for prototypes, coursework, generated websites, documentation, experiments, and collaborators who need to deliver a complete folder without setting up a full Git environment first.
+              </p>
+              <p>
+                Manual cloning is the right choice when you need a long-running local development workflow, branches, rebases, hooks, or detailed history inspection. DropToGit serves a narrower purpose: connect a repository, bring in a project folder, see the normalized tree, choose how the repository should change, and create one deliberate commit with the important details visible before you push.
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 text-sm">
+            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+              <p className="font-semibold text-foreground">For builders moving quickly</p>
+              <p className="mt-1 leading-6 text-muted-foreground">Skip repetitive setup when the deliverable is already prepared and the next step is a clean repository snapshot.</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+              <p className="font-semibold text-foreground">For learners and collaborators</p>
+              <p className="mt-1 leading-6 text-muted-foreground">See the branch, folders, files, mode, and commit message in plain language before the change reaches GitHub.</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-background/40 p-4">
+              <p className="font-semibold text-foreground">For focused delivery</p>
+              <p className="mt-1 leading-6 text-muted-foreground">Keep the browser as the handoff point while GitHub remains the source of truth for the repository.</p>
+            </div>
+          </div>
+        </section>
+
         <div className="mt-12"><WorkflowRail tokenReady={canShowRepos} repoReady={canShowUpload} filesReady={canShowConfigure} success={store.stage === 'success'} /></div>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">

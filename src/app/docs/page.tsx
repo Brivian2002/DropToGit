@@ -32,7 +32,7 @@ export default function DocsPage() {
         <div className="sticky top-24 rounded-2xl border border-border/70 bg-card/45 p-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">On this page</p>
           <nav className="mt-4 space-y-1 text-sm" aria-label="Documentation sections">
-            {[['getting-started', 'Getting started'], ['pat', 'Create a PAT'], ['repo', 'Connect a repo'], ['push-modes', 'Push modes'], ['troubleshooting', 'Troubleshooting'], ['security', 'Security'], ['roadmap', 'Roadmap']].map(([href, label]) => <a key={href} href={`#${href}`} className="block rounded-lg px-2.5 py-2 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">{label}</a>)}
+            {[['overview', 'How to think about it'], ['getting-started', 'Getting started'], ['pat', 'Create a PAT'], ['repo', 'Connect a repo'], ['push-modes', 'Push modes'], ['troubleshooting', 'Troubleshooting'], ['security', 'Security'], ['roadmap', 'Roadmap']].map(([href, label]) => <a key={href} href={`#${href}`} className="block rounded-lg px-2.5 py-2 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground">{label}</a>)}
           </nav>
           <div className="mt-5 border-t border-border/70 pt-4 text-xs leading-5 text-muted-foreground">Need to start now? <a href="/" className="font-medium text-primary hover:underline">Open the tool <span aria-hidden="true">→</span></a></div>
         </div>
@@ -47,6 +47,23 @@ export default function DocsPage() {
           Everything you need to know about using DropToGit — from generating your first
           token to troubleshooting common issues.
         </p>
+      </section>
+
+      {/* Product overview */}
+      <section id="overview" className="rounded-2xl border border-primary/15 bg-primary/5 p-5 sm:p-6">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">The product model</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight">A delivery workflow around one visible commit</h2>
+        <div className="mt-4 space-y-4 text-sm leading-6 text-muted-foreground">
+          <p>
+            DropToGit starts with a project that already exists on your computer. The browser reads the selected folder or zip file, removes accidental upload-root wrapping, normalizes paths, and presents the resulting hierarchy for review. It does not ask you to learn a second repository structure: the folders you see are the folders that will be prepared for GitHub.
+          </p>
+          <p>
+            After a repository and branch are selected, the important decision is the push mode. Replace mode creates a clean repository snapshot from the uploaded project, while Smart Update preserves files that are not part of the current upload. Both modes produce a commit, and the review screen keeps the branch, file count, destination, and commit message visible before the operation begins.
+          </p>
+          <p>
+            This makes DropToGit a focused handoff tool rather than a complete replacement for local Git. Use a local clone when you need ongoing branch work, rebases, hooks, history inspection, or collaboration inside a development environment. Use DropToGit when a prepared project needs a clear, browser-based path into GitHub.
+          </p>
+        </div>
       </section>
 
       {/* 1. Getting Started */}

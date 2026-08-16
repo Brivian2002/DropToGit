@@ -41,8 +41,11 @@ export const metadata: Metadata = {
     "google-adsense-account": "ca-pub-7744791430316817",
   },
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/logo.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/logo.png", type: "image/png", sizes: "512x512" }],
   },
   openGraph: {
     title: "DropToGit — Ship projects to GitHub without the terminal",
